@@ -22,6 +22,8 @@ export interface CanvasMeta {
    * empty for canvases authored manually or by tools that don't identify themselves.
    */
   source: string;
+  /** Slash-separated folder path, "" for root. Logical (in meta.json), so moves are atomic. */
+  folder: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +42,8 @@ export interface CanvasSummary {
   tags: string[];
   theme: string;
   source: string;
+  /** Slash-separated folder path, "" for root. Logical (in meta.json), so moves are atomic. */
+  folder: string;
   updatedAt: string;
 }
 
@@ -48,6 +52,8 @@ export interface SnapshotInfo {
   timestamp: string;
   /** Source captured in the snapshot's own meta.json — who wrote that revision. */
   source: string;
+  /** Slash-separated folder path, "" for root. Logical (in meta.json), so moves are atomic. */
+  folder: string;
 }
 
 export interface AppConfig {

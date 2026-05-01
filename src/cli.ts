@@ -12,6 +12,8 @@ import {
   deleteCanvas,
   listThemes,
   listAllTags,
+  listFolders,
+  renameFolder,
   addTheme,
   createCanvas,
   updateCanvas,
@@ -165,12 +167,15 @@ async function main() {
         tag: typeof flags.tag === "string" ? flags.tag : undefined,
         search: typeof flags.search === "string" ? flags.search : undefined,
         limit: typeof flags.limit === "string" ? Number(flags.limit) : undefined,
+        folder: typeof flags.folder === "string" ? flags.folder : undefined,
+        descendants: flags.descendants === true,
       });
       if (flags.json) { console.log(JSON.stringify(items, null, 2)); break; }
       if (items.length === 0) { console.log("(no canvases yet)"); break; }
       for (const c of items) {
         const tags = c.tags.length ? `  [${c.tags.join(", ")}]` : "";
-        console.log(`${c.id}\t${c.title}${tags}`);
+        const folder = c.folder ? `  /${c.folder}` : "";
+        console.log(`${c.id}\t${c.title}${folder}${tags}`);
       }
       break;
     }
@@ -221,7 +226,8 @@ async function main() {
       const tags = typeof flags.tags === "string"
         ? flags.tags.split(",").map(t => t.trim()).filter(Boolean)
         : undefined;
-      const meta = await createCanvas({ title, html, css, js, description, context, source, theme, tags });
+      const folder = typeof flags.folder === "string" ? flags.folder : undefined;
+      const meta = await createCanvas({ title, html, css, js, description, context, source, theme, tags, folder });
       emit(meta, flags);
       break;
     }
@@ -240,9 +246,44 @@ async function main() {
       const tags = typeof flags.tags === "string"
         ? flags.tags.split(",").map(t => t.trim()).filter(Boolean)
         : undefined;
-      const result = await updateCanvas(id, { title, html, css, js, description, context, source, theme, tags });
+      const folder = typeof flags.folder === "string" ? flags.folder : undefined;
+      const result = await updateCanvas(id, { title, html, css, js, description, context, source, theme, tags, folder });
       if (flags.json) { console.log(JSON.stringify(result, null, 2)); break; }
       console.log(`updated ${id} (snapshot ${result.version})`);
+      break;
+    }
+
+    case "mv": {
+      const id = positional[0];
+      const folder = positional[1];
+      if (!id || folder === undefined) { console.error("usage: supacanvas mv <id> <folder>  (use '' for root)"); process.exit(2); }
+      const result = await updateCanvas(id, { folder });
+      if (flags.json) { console.log(JSON.stringify(result, null, 2)); break; }
+      console.log(`moved ${id} → "${result.meta.folder || "(root)"}"`);
+      break;
+    }
+
+    case "folders": {
+      const sub = positional[0];
+      if (sub === "rename") {
+        const from = positional[1];
+        const to = positional[2];
+        if (from === undefined || to === undefined) {
+          console.error("usage: supacanvas folders rename <from> <to>"); process.exit(2);
+        }
+        const result = await renameFolder(from, to);
+        if (flags.json) { console.log(JSON.stringify(result, null, 2)); break; }
+        console.log(`renamed: ${result.moved.length} canvas(es) moved`);
+        for (const id of result.moved) console.log(`  ${id}`);
+        break;
+      }
+      const folders = await listFolders();
+      if (flags.json) { console.log(JSON.stringify(folders, null, 2)); break; }
+      if (folders.length === 0) { console.log("(no folders)"); break; }
+      for (const f of folders) {
+        const name = f.name || "(unfiled)";
+        console.log(`${String(f.count).padStart(4)} ${name}`);
+      }
       break;
     }
 

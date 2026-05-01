@@ -9,6 +9,8 @@ import {
   restoreVersion,
   listThemes,
   listAllTags,
+  listFolders,
+  renameFolder,
   ensureLayout,
 } from "./storage.ts";
 import { renderCanvasDoc, escapeHtml } from "./render.ts";
@@ -21,9 +23,14 @@ export function buildApp() {
   const app = new Hono();
 
   app.get("/", async (c) => {
-    const canvases = await listCanvases();
+    const folderQ = c.req.query("folder");
+    const canvases = await listCanvases({
+      folder: folderQ !== undefined ? folderQ : undefined,
+      descendants: c.req.query("descendants") === "1",
+    });
     const themes = await listThemes();
-    return c.html(galleryHtml(canvases, themes));
+    const folders = await listFolders();
+    return c.html(galleryHtml(canvases, themes, folders, folderQ ?? null));
   });
 
   app.get("/install", async (c) => {
@@ -111,7 +118,9 @@ export function buildApp() {
   app.get("/api/canvases", async (c) => {
     const tag = c.req.query("tag") ?? undefined;
     const search = c.req.query("search") ?? undefined;
-    return c.json(await listCanvases({ tag, search }));
+    const folder = c.req.query("folder");
+    const descendants = c.req.query("descendants") === "1";
+    return c.json(await listCanvases({ tag, search, folder: folder !== undefined ? folder : undefined, descendants }));
   });
 
   app.post("/api/canvases", async (c) => {
@@ -126,6 +135,7 @@ export function buildApp() {
       description: typeof body.description === "string" ? body.description : undefined,
       context: typeof body.context === "string" ? body.context : undefined,
       source: typeof body.source === "string" ? body.source : undefined,
+      folder: typeof body.folder === "string" ? body.folder : undefined,
     });
     return c.json(meta, 201);
   });
@@ -150,6 +160,7 @@ export function buildApp() {
         description: typeof body.description === "string" ? body.description : undefined,
         context: typeof body.context === "string" ? body.context : undefined,
         source: typeof body.source === "string" ? body.source : undefined,
+      folder: typeof body.folder === "string" ? body.folder : undefined,
       });
       return c.json(result);
     } catch (e) {
@@ -184,6 +195,20 @@ export function buildApp() {
 
   app.get("/api/themes", async (c) => c.json(await listThemes()));
   app.get("/api/tags", async (c) => c.json(await listAllTags()));
+
+  app.get("/api/folders", async (c) => c.json(await listFolders()));
+
+  app.post("/api/folders/rename", async (c) => {
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const from = String(body.from ?? "");
+    const to = String(body.to ?? "");
+    try {
+      const result = await renameFolder(from, to);
+      return c.json(result);
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400);
+    }
+  });
 
   return app;
 }
@@ -328,10 +353,13 @@ interface GallerySummary {
   tags: string[];
   theme: string;
   source: string;
+  folder: string;
   updatedAt: string;
 }
 
-function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
+interface FolderEntry { name: string; count: number; }
+
+function galleryHtml(canvases: GallerySummary[], _themes: string[], folders: FolderEntry[] = [], currentFolder: string | null = null): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", year: "numeric",
   }).toUpperCase();
@@ -342,7 +370,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
   const cards = canvases.map((c, i) => {
     const canvas = String(i + 1).padStart(2, "0");
     return `
-    <a class="canvas" href="/c/${encodeURIComponent(c.id)}" style="--i:${i}">
+    <a class="canvas" href="/c/${encodeURIComponent(c.id)}" style="--i:${i}" draggable="true" data-id="${escapeHtml(c.id)}" data-folder="${escapeHtml(c.folder)}">
       <header class="canvas-head">
         <span class="canvas-no">CANVAS Nº ${canvas} / ${totalPad}</span>
         <span class="canvas-date">${formatRelative(c.updatedAt)}</span>
@@ -360,10 +388,26 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
         ${c.tags.length
           ? `<div class="canvas-subjects">${c.tags.map(t => escapeHtml(t)).join(" · ")}</div>`
           : `<div class="canvas-subjects muted">Unclassified</div>`}
-        <div class="canvas-catalog">№ ${escapeHtml(c.id)}</div>
+        <div class="canvas-catalog">
+          <span>№ ${escapeHtml(c.id)}</span>
+          ${c.folder ? `<span class="canvas-folder">/${escapeHtml(c.folder)}</span>` : ``}
+        </div>
       </div>
     </a>`;
   }).join("");
+
+  // Folder filter row. "All" + "Unfiled" (root) + each named folder.
+  const allActive = currentFolder === null;
+  const rootActive = currentFolder === "";
+  const folderChips = `
+    <div class="folder-bar" id="folder-bar">
+      <a class="folder-chip${allActive ? " active" : ""}" href="/" data-folder-target>All <span class="ct">${canvases.length || ""}</span></a>
+      <a class="folder-chip${rootActive ? " active" : ""}" href="/?folder=" data-folder-target="">Unfiled${rootActive || allActive ? "" : ""}</a>
+      ${folders.filter(f => f.name !== "").map(f => {
+        const active = currentFolder !== null && currentFolder === f.name;
+        return `<a class="folder-chip${active ? " active" : ""}" href="/?folder=${encodeURIComponent(f.name)}" data-folder-target="${escapeHtml(f.name)}">/${escapeHtml(f.name)} <span class="ct">${f.count}</span></a>`;
+      }).join("")}
+    </div>`;
 
   const empty = total === 0 ? `
     <div class="empty">
@@ -397,6 +441,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
     <input id="search" placeholder="Search the archive…" autocomplete="off" />
     <button id="new">+ Catalog blank</button>
   </div>
+  ${folders.length > 0 ? folderChips : ""}
 </header>
 
 <main class="archive">
@@ -439,6 +484,35 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
   .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 0 4px; }
   .toolbar input { width: 320px; max-width: 60%; font-family: var(--serif); font-style: italic; font-size: 18px; }
   .toolbar input::placeholder { color: var(--muted); font-style: italic; }
+
+  /* Folder filter chips */
+  .folder-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 14px 0 4px;
+  }
+  .folder-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: lowercase;
+    color: var(--ink-2); background: transparent;
+    border: 1px solid var(--rule-2); border-radius: 999px;
+    padding: 4px 11px; text-decoration: none; border-bottom: 1px solid var(--rule-2);
+    transition: color 180ms var(--easing), border-color 180ms var(--easing), background 180ms var(--easing);
+  }
+  .folder-chip:hover { color: var(--accent); border-color: var(--accent); border-bottom-color: var(--accent); }
+  .folder-chip.active { color: var(--card); background: var(--ink); border-color: var(--ink); }
+  .folder-chip .ct { color: var(--muted); font-size: 11px; }
+  .folder-chip.active .ct { color: var(--card); opacity: 0.7; }
+  .folder-chip.drop-hover {
+    color: var(--card); background: var(--accent); border-color: var(--accent);
+    transform: scale(1.04);
+  }
+  .canvas-folder {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    margin-left: 8px; letter-spacing: 0.02em;
+  }
+  .canvas[draggable="true"] { cursor: grab; }
+  .canvas[draggable="true"]:active { cursor: grabbing; }
 
   .archive { max-width: 1320px; margin: 0 auto; padding: 8px 48px 80px; }
   .grid {
@@ -588,6 +662,35 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
       card.style.display = !q || text.includes(q) ? '' : 'none';
     }
   });
+
+  // Drag-and-drop: drop a card on a folder chip to move it.
+  let draggingId = null;
+  for (const card of grid.querySelectorAll('.canvas[draggable="true"]')) {
+    card.addEventListener('dragstart', (e) => {
+      draggingId = card.dataset.id;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.id);
+    });
+    card.addEventListener('dragend', () => { draggingId = null; });
+  }
+  for (const chip of document.querySelectorAll('.folder-chip[data-folder-target]')) {
+    chip.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; chip.classList.add('drop-hover'); });
+    chip.addEventListener('dragleave', () => { chip.classList.remove('drop-hover'); });
+    chip.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      chip.classList.remove('drop-hover');
+      const id = draggingId || e.dataTransfer.getData('text/plain');
+      if (!id) return;
+      const target = chip.getAttribute('data-folder-target');
+      const res = await fetch('/api/canvases/' + encodeURIComponent(id), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: target }),
+      });
+      if (res.ok) location.reload();
+      else alert('move failed: ' + (await res.text()));
+    });
+  }
   document.getElementById('new')?.addEventListener('click', async () => {
     const title = prompt('Title?', 'Untitled');
     if (title === null) return;
@@ -661,7 +764,14 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     </section>
 
     <section class="dsec">
-      <div class="eyebrow">Canvas</div>
+      <div class="eyebrow">Folder</div>
+      <input id="folder" value="${escapeHtml(meta.folder)}" placeholder="e.g. work/q2-2026 — empty = unfiled" autocomplete="off" list="folder-list" />
+      <datalist id="folder-list"></datalist>
+      <div class="empty-note small" id="folder-help">${meta.folder ? `In <code>${escapeHtml(meta.folder)}</code>` : "Unfiled. Type a path to file this canvas — autocomplete suggests folders you already use."}</div>
+    </section>
+
+    <section class="dsec">
+      <div class="eyebrow">Theme</div>
       <select id="theme">${themeOptions}</select>
     </section>
 
@@ -1026,6 +1136,38 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   }
   bindAutosave(document.getElementById('description'), 'description');
   bindAutosave(document.getElementById('context'), 'context');
+
+  // Folder field with autocomplete from /api/folders.
+  const folderInput = document.getElementById('folder');
+  const folderList = document.getElementById('folder-list');
+  if (folderInput) {
+    fetch('/api/folders').then(r => r.ok ? r.json() : []).then((folders) => {
+      folderList.innerHTML = (folders || [])
+        .filter(f => f.name)
+        .sort((a, b) => b.count - a.count)
+        .map(f => '<option value="' + f.name.replace(/"/g, '&quot;') + '">' + f.count + ' canvas' + (f.count === 1 ? '' : 'es') + '</option>')
+        .join('');
+    }).catch(() => {});
+    let lastFolder = folderInput.value;
+    folderInput.addEventListener('blur', async () => {
+      if (folderInput.value === lastFolder) return;
+      const res = await fetch('/api/canvases/' + encodeURIComponent(id), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: folderInput.value }),
+      });
+      if (res.ok) {
+        lastFolder = folderInput.value;
+        const help = document.getElementById('folder-help');
+        if (help) help.innerHTML = folderInput.value
+          ? 'In <code>' + folderInput.value.replace(/</g,'&lt;') + '</code>'
+          : 'Unfiled.';
+      } else {
+        alert('move failed: ' + (await res.text()));
+        folderInput.value = lastFolder;
+      }
+    });
+  }
 
   const ctxToggle = document.getElementById('ctx-toggle');
   const ctxArea = document.getElementById('context');

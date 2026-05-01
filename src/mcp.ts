@@ -13,6 +13,8 @@ import {
   listVersions,
   restoreVersion,
   listThemes,
+  listFolders,
+  renameFolder,
   loadConfig,
   ensureLayout,
 } from "./storage.ts";
@@ -72,6 +74,14 @@ const tools: ToolDef[] = [
             "Set this on EVERY create AND every update — each snapshot captures the source at write time, " +
             "so the user can see who wrote which revision.",
         },
+        folder: {
+          type: "string",
+          description:
+            "Optional slash-separated folder path to file the canvas under (e.g. 'work/q2-2026'). " +
+            "Use this to organize canvases by project so a user with many canvases doesn't drown. " +
+            "Empty string = unfiled. a-z 0-9 - _, slash separators, max 6 levels deep, 40 chars per segment. " +
+            "If the user is working on a specific topic, pick one folder and reuse it for the whole conversation.",
+        },
       },
       required: ["title", "html"],
     },
@@ -86,6 +96,7 @@ const tools: ToolDef[] = [
         description: typeof args.description === "string" ? args.description : undefined,
         context: typeof args.context === "string" ? args.context : undefined,
         source: typeof args.source === "string" ? args.source : undefined,
+        folder: typeof args.folder === "string" ? args.folder : undefined,
       });
       const cfg = await loadConfig();
       return {
@@ -121,6 +132,12 @@ const tools: ToolDef[] = [
             "Set on EVERY update. If omitted, the previous source is preserved (which means the user can't tell you edited it). " +
             "The snapshot captured before this update preserves whoever wrote the prior version.",
         },
+        folder: {
+          type: "string",
+          description:
+            "Move the canvas to a different folder. Slash-separated path. Empty = root. " +
+            "Use canvas_move if you only want to move without changing other fields.",
+        },
       },
       required: ["id"],
     },
@@ -136,6 +153,7 @@ const tools: ToolDef[] = [
         description: typeof args.description === "string" ? args.description : undefined,
         context: typeof args.context === "string" ? args.context : undefined,
         source: typeof args.source === "string" ? args.source : undefined,
+        folder: typeof args.folder === "string" ? args.folder : undefined,
       });
       const cfg = await loadConfig();
       return {
@@ -165,15 +183,18 @@ const tools: ToolDef[] = [
   {
     name: "canvas_list",
     description:
-      "List canvases (most recently updated first). Optionally filter by tag or text search. " +
-      "Each entry includes `description` so you can identify a canvas without fetching the body. " +
-      "Use the `search` filter to find canvases by topic — it matches against title, description, context, and tags.",
+      "List canvases (most recently updated first). Optionally filter by tag, folder, or text search. " +
+      "Each entry includes `description` and `folder` so you can identify a canvas without fetching the body. " +
+      "Use `search` for topic search (matches title/description/context/tags/source/folder). " +
+      "Use `folder` for exact folder match (empty string = root); set `descendants: true` to include subfolders.",
     inputSchema: {
       type: "object",
       properties: {
         tag: { type: "string" },
         search: { type: "string" },
         limit: { type: "number" },
+        folder: { type: "string", description: "Match canvases in this folder. '' = root/unfiled." },
+        descendants: { type: "boolean", description: "When folder is set, also include all subfolders. Default false." },
       },
     },
     async handler(args) {
@@ -181,7 +202,56 @@ const tools: ToolDef[] = [
         tag: typeof args.tag === "string" ? args.tag : undefined,
         search: typeof args.search === "string" ? args.search : undefined,
         limit: typeof args.limit === "number" ? args.limit : undefined,
+        folder: typeof args.folder === "string" ? args.folder : undefined,
+        descendants: args.descendants === true,
       });
+    },
+  },
+  {
+    name: "canvas_move",
+    description:
+      "Move a canvas to a different folder. Convenience wrapper for canvas_update with just the folder field. " +
+      "Empty string = unfiled (root). The previous folder is captured in the snapshot taken before this move.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        folder: { type: "string", description: "Slash-separated folder path. '' for root." },
+      },
+      required: ["id", "folder"],
+    },
+    async handler(args) {
+      const id = String(args.id);
+      const folder = String(args.folder ?? "");
+      const result = await updateCanvas(id, { folder });
+      return { id, folder: result.meta.folder, version: result.version };
+    },
+  },
+  {
+    name: "folder_list",
+    description:
+      "List every distinct folder used across all canvases, with the count of canvases in each. " +
+      "Use this when picking a folder name on canvas_create — prefer reusing an existing folder over inventing a new one for the same topic.",
+    inputSchema: { type: "object", properties: {} },
+    async handler() {
+      return await listFolders();
+    },
+  },
+  {
+    name: "folder_rename",
+    description:
+      "Rename / move a folder across every canvas in it. Also moves any descendant subfolders, preserving their relative paths. " +
+      "Each affected canvas is snapshotted before the move. Empty string for either argument refers to the root.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        from: { type: "string" },
+        to: { type: "string" },
+      },
+      required: ["from", "to"],
+    },
+    async handler(args) {
+      return await renameFolder(String(args.from ?? ""), String(args.to ?? ""));
     },
   },
   {
