@@ -425,6 +425,28 @@ async function main() {
       const installedDetected = clients.some(c => existsSync(c.path));
       const writeMode = flags.write === true;
 
+      // Detect stale 'canvas' entries from versions before 0.7.4 that wrote
+      // mcpServers.canvas with command 'canvas'. We only flag/remove an entry
+      // if its signature exactly matches what the old buggy version wrote —
+      // anyone with an unrelated MCP server they happened to name 'canvas'
+      // is left alone.
+      interface StaleEntry { client: string; path: string }
+      const stale: StaleEntry[] = [];
+      for (const c of clients) {
+        if (c.format !== "json" || !existsSync(c.path)) continue;
+        try {
+          const raw = await readFile(c.path, "utf8");
+          const cfg = JSON.parse(raw) as { mcpServers?: Record<string, { command?: string; args?: unknown[] }> };
+          const old = cfg.mcpServers?.canvas;
+          const looksLikeOurs =
+            old !== undefined &&
+            old.command === "canvas" &&
+            Array.isArray(old.args) &&
+            old.args[0] === "mcp";
+          if (looksLikeOurs) stale.push({ client: c.name, path: c.path });
+        } catch { /* ignore unreadable / unparseable */ }
+      }
+
       console.log("");
       console.log("Supacanvas setup");
       console.log("────────────────");
@@ -447,22 +469,48 @@ async function main() {
         console.log("");
       }
 
+      if (stale.length > 0) {
+        console.log("⚠  Stale 'canvas' entry detected from a pre-0.7.4 install:");
+        for (const s of stale) {
+          console.log(`     ${s.client.padEnd(16)} ${s.path}`);
+        }
+        console.log("");
+        console.log("   That entry was created when supacanvas was briefly named 'canvas'");
+        console.log("   and points at a 'canvas' command that no longer exists.");
+        if (writeMode) {
+          console.log("   --write detected: removing it (and adding the correct 'supacanvas' entry).");
+        } else {
+          console.log("   Re-run with --write to remove it cleanly:");
+          console.log("       supacanvas setup --write");
+        }
+        console.log("");
+      }
+
       if (writeMode) {
         console.log("Writing config (--write)…");
         for (const c of clients) {
           if (c.format !== "json") continue;
           // Only touch JSON configs we know how to merge safely.
           await mkdir(dirname(c.path), { recursive: true });
-          let existing: { mcpServers?: Record<string, unknown> } = {};
+          let existing: { mcpServers?: Record<string, { command?: string; args?: unknown[] }> } = {};
           if (existsSync(c.path)) {
             try { existing = JSON.parse(await readFile(c.path, "utf8")); } catch { /* keep empty */ }
           }
-          const merged = {
-            ...existing,
-            mcpServers: { ...(existing.mcpServers ?? {}), supacanvas: snippet.mcpServers.supacanvas },
-          };
+          const mergedServers = { ...(existing.mcpServers ?? {}) };
+          // Drop a stale 'canvas' entry IF it has the buggy signature.
+          const oldCanvas = mergedServers.canvas;
+          const oldCanvasIsOurs =
+            oldCanvas !== undefined &&
+            oldCanvas.command === "canvas" &&
+            Array.isArray(oldCanvas.args) &&
+            oldCanvas.args[0] === "mcp";
+          if (oldCanvasIsOurs) delete mergedServers.canvas;
+          // Add (or refresh) the correct 'supacanvas' entry.
+          mergedServers.supacanvas = snippet.mcpServers.supacanvas;
+          const merged = { ...existing, mcpServers: mergedServers };
           await writeFile(c.path, JSON.stringify(merged, null, 2) + "\n");
-          console.log(`  ✓ wrote ${c.path}`);
+          const action = oldCanvasIsOurs ? "wrote (replaced stale 'canvas')" : "wrote";
+          console.log(`  ✓ ${action} ${c.path}`);
         }
         console.log("");
         console.log("Restart any clients you wrote to so they re-read the config.");
