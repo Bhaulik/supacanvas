@@ -1,6 +1,6 @@
 {
   "name": "supacanvas",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. AI-agnostic, files on disk, themable, versioned, screenshottable, exportable.",
   "type": "module",
   "license": "MIT",
@@ -29,22 +29,24 @@
     "url": "https://github.com/bhaulik/supacanvas/issues"
   },
   "bin": {
-    "supacanvas": "./bin/supacanvas",
-    "supa": "./bin/supa"
+    "supacanvas": "./dist/cli.js",
+    "supa": "./dist/cli.js"
   },
   "files": [
-    "src/",
-    "bin/",
+    "dist/",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
+    "build": "bun build src/cli.ts --outfile=dist/cli.js --target=node --packages=external --format=esm && cp -r src/themes dist/themes && chmod +x dist/cli.js",
+    "prepublishOnly": "bun run build",
     "serve": "bun run src/cli.ts serve",
     "mcp": "bun run src/cli.ts mcp",
     "dev": "bun --hot run src/cli.ts serve",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "hono": "^4.6.0",
     "puppeteer-core": "^24.42.0",
@@ -52,9 +54,10 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },
   "engines": {
-    "bun": ">=1.1.0"
+    "node": ">=18.0.0"
   }
 }

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { serve } from "@hono/node-server";
 import {
   createCanvas,
   updateCanvas,
@@ -216,10 +217,13 @@ export function buildApp() {
 export async function startServer(port: number): Promise<{ url: string; stop: () => void }> {
   await ensureLayout();
   const app = buildApp();
-  const server = Bun.serve({ port, fetch: app.fetch });
+  // @hono/node-server runs the same app on Node's http module — same fetch
+  // signature, but ships in a Node-compatible way so the npm package works
+  // without Bun installed.
+  const server = serve({ port, fetch: app.fetch });
   return {
-    url: `http://localhost:${server.port}`,
-    stop: () => server.stop(),
+    url: `http://localhost:${port}`,
+    stop: () => server.close(),
   };
 }
 

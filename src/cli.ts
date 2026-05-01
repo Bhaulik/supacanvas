@@ -1,8 +1,9 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { spawn } from "node:child_process";
 import {
   supacanvasHome,
   ensureLayout,
@@ -116,7 +117,8 @@ async function openInBrowser(url: string): Promise<void> {
     : process.platform === "win32" ? "start"
     : "xdg-open";
   try {
-    Bun.spawn([cmd, url], { stdout: "ignore", stderr: "ignore" });
+    const child = spawn(cmd, [url], { stdio: "ignore", detached: true });
+    child.unref();
   } catch { /* ignore — print URL instead */ }
 }
 
