@@ -1,10 +1,10 @@
 {
   "name": "supacanvas",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. AI-agnostic, files on disk, themable, versioned, screenshottable, exportable.",
   "type": "module",
   "license": "MIT",
-  "author": "yabemando@gmail.com",
+  "author": "Bhaulik (https://github.com/bhaulik)",
   "keywords": [
     "supacanvas",
     "mcp",
