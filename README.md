@@ -56,6 +56,10 @@ supacanvas serve     # starts the viewer at http://localhost:7777
 
 There's also a short alias — `supa` — wherever you'd type `supacanvas`.
 
+## For AI agents (Cursor, Claude Code, Claude Desktop, Continue, etc.)
+
+Drop [`AGENTS.md`](./AGENTS.md) into your tool's rules / system-prompt slot. The file is a tool-agnostic guide that teaches an agent how to use Supacanvas well — when to make canvases, when to screenshot back, how to fill the description / context / source / folder fields. Per-tool install paths are at the bottom of that file.
+
 ## Wire it into an AI client
 
 The MCP server speaks JSON-RPC over stdio. Add it to whatever client you use:
