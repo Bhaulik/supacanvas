@@ -428,12 +428,12 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[], folders: Fol
     <span class="eyebrow">${today}</span>
   </div>
   <h1 class="masthead-title">
-    <span class="title-roman">The</span>
-    <span class="title-italic">Archive</span>
+    <span class="title-roman">Supa</span>
+    <span class="title-italic">Canvas</span>
     <span class="title-mark">№</span>
   </h1>
   <div class="masthead-row masthead-meta">
-    <span class="eyebrow">A live registry of AI-generated specimens — held on disk, viewable in browser.</span>
+    <span class="eyebrow">Your AI-generated canvases — held on disk, viewable in browser, exportable anywhere.</span>
     <span class="eyebrow">${total} ${total === 1 ? "specimen" : "specimens"}</span>
   </div>
   <hr />
@@ -707,7 +707,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[], folders: Fol
     if (res.ok) { const m = await res.json(); location.href = '/c/' + m.id; }
   });
 </script>`;
-  return pageShell("The Archive — Supacanvas", body);
+  return pageShell("Supa Canvas — your AI canvas archive", body);
 }
 
 function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]): string {
@@ -1312,7 +1312,7 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     try { await navigator.clipboard.writeText(catalog.textContent); catalog.dataset.copied = '1'; setTimeout(() => delete catalog.dataset.copied, 900); } catch {}
   });
 </script>`;
-  return pageShell(meta.title + " — Archive", body);
+  return pageShell(meta.title + " — Supacanvas", body);
 }
 
 function formatRelative(iso: string): string {
