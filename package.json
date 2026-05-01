@@ -1,6 +1,6 @@
 {
   "name": "supacanvas",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. AI-agnostic, files on disk, themable, versioned, screenshottable, exportable.",
   "type": "module",
   "license": "MIT",

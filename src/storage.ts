@@ -94,6 +94,26 @@ export async function saveConfig(cfg: AppConfig): Promise<void> {
 }
 
 /**
+ * Strip wrappers that AI agents sometimes leak into html/css/js fields.
+ * Most common offender: <![CDATA[ ... ]]> blocks (XML, not HTML — the CSS parser
+ * chokes on the opening token and silently drops styling). Also strips
+ * markdown code-fence pairs like ```html ... ``` if an agent wrapped its
+ * payload that way before passing it to the MCP tool.
+ */
+export function sanitizeContent(input: string): string {
+  if (!input) return input;
+  let s = input;
+  // CDATA wrapper — leading
+  s = s.replace(/^\s*<!\[CDATA\[\s*\n?/i, "");
+  // CDATA wrapper — trailing
+  s = s.replace(/\s*\]\]>\s*$/i, "");
+  // Markdown fence wrapping the whole payload (```lang\n ... \n```)
+  s = s.replace(/^\s*```[a-z0-9_-]*\s*\n?/i, "");
+  s = s.replace(/\s*```\s*$/i, "");
+  return s;
+}
+
+/**
  * Sanitize a folder path. Lowercase, slash-separated, no leading/trailing
  * slashes, no '..', no empty segments. Returns "" for root / unfiled.
  * Throws on invalid characters or excessive depth.
@@ -182,9 +202,9 @@ export async function createCanvas(input: CreateInput): Promise<CanvasMeta> {
   };
   await writeCanvasFiles(id, {
     meta,
-    html: input.html,
-    css: input.css ?? "",
-    js: input.js ?? "",
+    html: sanitizeContent(input.html),
+    css: sanitizeContent(input.css ?? ""),
+    js: sanitizeContent(input.js ?? ""),
   });
   return meta;
 }
@@ -220,9 +240,9 @@ export async function updateCanvas(id: string, input: UpdateInput): Promise<{ me
   };
   const next: Canvas = {
     meta,
-    html: input.html ?? existing.html,
-    css: input.css ?? existing.css,
-    js: input.js ?? existing.js,
+    html: input.html !== undefined ? sanitizeContent(input.html) : existing.html,
+    css: input.css !== undefined ? sanitizeContent(input.css) : existing.css,
+    js: input.js !== undefined ? sanitizeContent(input.js) : existing.js,
   };
   await writeCanvasFiles(id, next);
   await pruneVersions(id);
