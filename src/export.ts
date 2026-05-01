@@ -1,9 +1,9 @@
-import type { Canvas } from "./types.ts";
+import type { Plate } from "./types.ts";
 import { getThemeCSS } from "./storage.ts";
 import { escapeHtml } from "./render.ts";
 
-export function toMarkdown(canvas: Canvas): string {
-  const { meta, html, css, js } = canvas;
+export function toMarkdown(plate: Plate): string {
+  const { meta, html, css, js } = plate;
   const lines: string[] = [
     "---",
     `id: ${meta.id}`,
@@ -39,40 +39,40 @@ function jsonString(s: string): string {
   return JSON.stringify(s);
 }
 
-export async function toStandaloneHtml(canvas: Canvas): Promise<string> {
-  const themeCss = await getThemeCSS(canvas.meta.theme);
-  const contextBlock = canvas.meta.context
-    ? `<!-- canvas-context\n${canvas.meta.context.replace(/-->/g, "-- >")}\n-->\n`
+export async function toStandaloneHtml(plate: Plate): Promise<string> {
+  const themeCss = await getThemeCSS(plate.meta.theme);
+  const contextBlock = plate.meta.context
+    ? `<!-- plate-context\n${plate.meta.context.replace(/-->/g, "-- >")}\n-->\n`
     : "";
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="generator" content="universal-canvas" />
-<meta name="canvas-id" content="${escapeHtml(canvas.meta.id)}" />
-<meta name="canvas-theme" content="${escapeHtml(canvas.meta.theme)}" />
-<meta name="canvas-source" content="${escapeHtml(canvas.meta.source)}" />
-<meta name="description" content="${escapeHtml(canvas.meta.description)}" />
-${contextBlock}<title>${escapeHtml(canvas.meta.title)}</title>
-<style data-canvas-theme="${escapeHtml(canvas.meta.theme)}">
+<meta name="generator" content="universal-plate" />
+<meta name="plate-id" content="${escapeHtml(plate.meta.id)}" />
+<meta name="plate-theme" content="${escapeHtml(plate.meta.theme)}" />
+<meta name="plate-source" content="${escapeHtml(plate.meta.source)}" />
+<meta name="description" content="${escapeHtml(plate.meta.description)}" />
+${contextBlock}<title>${escapeHtml(plate.meta.title)}</title>
+<style data-plate-theme="${escapeHtml(plate.meta.theme)}">
 ${themeCss}
 </style>
-<style data-canvas-style>
-${canvas.css}
+<style data-plate-style>
+${plate.css}
 </style>
 </head>
 <body>
-${canvas.html}
+${plate.html}
 <script>
-${canvas.js.replace(/<\/script/gi, "<\\/script")}
+${plate.js.replace(/<\/script/gi, "<\\/script")}
 </script>
 </body>
 </html>`;
 }
 
-export async function toPrintHtml(canvas: Canvas): Promise<string> {
-  const themeCss = await getThemeCSS(canvas.meta.theme);
+export async function toPrintHtml(plate: Plate): Promise<string> {
+  const themeCss = await getThemeCSS(plate.meta.theme);
   // Same as standalone but auto-fires the print dialog so the user can
   // "Save as PDF" via the browser's native print sheet.
   return `<!doctype html>
@@ -80,22 +80,22 @@ export async function toPrintHtml(canvas: Canvas): Promise<string> {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${escapeHtml(canvas.meta.title)}</title>
+<title>${escapeHtml(plate.meta.title)}</title>
 <style>
 @page { size: auto; margin: 12mm; }
 @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
-<style data-canvas-theme="${escapeHtml(canvas.meta.theme)}">
+<style data-plate-theme="${escapeHtml(plate.meta.theme)}">
 ${themeCss}
 </style>
-<style data-canvas-style>
-${canvas.css}
+<style data-plate-style>
+${plate.css}
 </style>
 </head>
 <body>
-${canvas.html}
+${plate.html}
 <script>
-${canvas.js.replace(/<\/script/gi, "<\\/script")}
+${plate.js.replace(/<\/script/gi, "<\\/script")}
 </script>
 <script>
 // Wait for assets/animations to settle, then open the print dialog.

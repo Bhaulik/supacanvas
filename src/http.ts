@@ -1,85 +1,85 @@
 import { Hono } from "hono";
 import {
-  createCanvas,
-  updateCanvas,
-  getCanvas,
-  listCanvases,
-  deleteCanvas,
+  createPlate,
+  updatePlate,
+  getPlate,
+  listPlates,
+  deletePlate,
   listVersions,
   restoreVersion,
   listThemes,
   listAllTags,
   ensureLayout,
 } from "./storage.ts";
-import { renderCanvasDoc, escapeHtml } from "./render.ts";
+import { renderPlateDoc, escapeHtml } from "./render.ts";
 import { toMarkdown, toStandaloneHtml, toPrintHtml } from "./export.ts";
-import type { CanvasMeta, SnapshotInfo } from "./types.ts";
+import type { PlateMeta, SnapshotInfo } from "./types.ts";
 
 export function buildApp() {
   const app = new Hono();
 
   app.get("/", async (c) => {
-    const canvases = await listCanvases();
+    const plates = await listPlates();
     const themes = await listThemes();
-    return c.html(galleryHtml(canvases, themes));
+    return c.html(galleryHtml(plates, themes));
   });
 
-  app.get("/c/:id", async (c) => {
-    const canvas = await getCanvas(c.req.param("id"));
-    if (!canvas) return c.notFound();
+  app.get("/p/:id", async (c) => {
+    const plate = await getPlate(c.req.param("id"));
+    if (!plate) return c.notFound();
     const themes = await listThemes();
-    const versions = await listVersions(canvas.meta.id);
-    return c.html(viewerHtml(canvas.meta, themes, versions));
+    const versions = await listVersions(plate.meta.id);
+    return c.html(viewerHtml(plate.meta, themes, versions));
   });
 
-  // The actual canvas content, served into a sandboxed iframe.
-  app.get("/c/:id/raw", async (c) => {
-    const canvas = await getCanvas(c.req.param("id"));
-    if (!canvas) return c.notFound();
-    const doc = await renderCanvasDoc(canvas);
+  // The actual plate content, served into a sandboxed iframe.
+  app.get("/p/:id/raw", async (c) => {
+    const plate = await getPlate(c.req.param("id"));
+    if (!plate) return c.notFound();
+    const doc = await renderPlateDoc(plate);
     c.header("Cache-Control", "no-store");
     return c.html(doc);
   });
 
   // ---- Exports ----
 
-  app.get("/c/:id/export.md", async (c) => {
-    const canvas = await getCanvas(c.req.param("id"));
-    if (!canvas) return c.notFound();
+  app.get("/p/:id/export.md", async (c) => {
+    const plate = await getPlate(c.req.param("id"));
+    if (!plate) return c.notFound();
     c.header("Content-Type", "text/markdown; charset=utf-8");
-    c.header("Content-Disposition", `attachment; filename="${safeFilename(canvas.meta.title)}.md"`);
-    return c.body(toMarkdown(canvas));
+    c.header("Content-Disposition", `attachment; filename="${safeFilename(plate.meta.title)}.md"`);
+    return c.body(toMarkdown(plate));
   });
 
-  app.get("/c/:id/export.html", async (c) => {
-    const canvas = await getCanvas(c.req.param("id"));
-    if (!canvas) return c.notFound();
-    const html = await toStandaloneHtml(canvas);
+  app.get("/p/:id/export.html", async (c) => {
+    const plate = await getPlate(c.req.param("id"));
+    if (!plate) return c.notFound();
+    const html = await toStandaloneHtml(plate);
     c.header("Content-Type", "text/html; charset=utf-8");
-    c.header("Content-Disposition", `attachment; filename="${safeFilename(canvas.meta.title)}.html"`);
+    c.header("Content-Disposition", `attachment; filename="${safeFilename(plate.meta.title)}.html"`);
     return c.body(html);
   });
 
   // Auto-print page — user gets the browser's native print sheet → Save as PDF.
-  app.get("/c/:id/print", async (c) => {
-    const canvas = await getCanvas(c.req.param("id"));
-    if (!canvas) return c.notFound();
-    const html = await toPrintHtml(canvas);
+  app.get("/p/:id/print", async (c) => {
+    const plate = await getPlate(c.req.param("id"));
+    if (!plate) return c.notFound();
+    const html = await toPrintHtml(plate);
     c.header("Cache-Control", "no-store");
     return c.html(html);
   });
 
   // ---- JSON API ----
 
-  app.get("/api/canvases", async (c) => {
+  app.get("/api/plates", async (c) => {
     const tag = c.req.query("tag") ?? undefined;
     const search = c.req.query("search") ?? undefined;
-    return c.json(await listCanvases({ tag, search }));
+    return c.json(await listPlates({ tag, search }));
   });
 
-  app.post("/api/canvases", async (c) => {
+  app.post("/api/plates", async (c) => {
     const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
-    const meta = await createCanvas({
+    const meta = await createPlate({
       title: String(body.title ?? "Untitled"),
       html: String(body.html ?? ""),
       css: typeof body.css === "string" ? body.css : "",
@@ -93,17 +93,17 @@ export function buildApp() {
     return c.json(meta, 201);
   });
 
-  app.get("/api/canvases/:id", async (c) => {
-    const canvas = await getCanvas(c.req.param("id"));
-    if (!canvas) return c.notFound();
-    return c.json(canvas);
+  app.get("/api/plates/:id", async (c) => {
+    const plate = await getPlate(c.req.param("id"));
+    if (!plate) return c.notFound();
+    return c.json(plate);
   });
 
-  app.patch("/api/canvases/:id", async (c) => {
+  app.patch("/api/plates/:id", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
     try {
-      const result = await updateCanvas(id, {
+      const result = await updatePlate(id, {
         title: typeof body.title === "string" ? body.title : undefined,
         html: typeof body.html === "string" ? body.html : undefined,
         css: typeof body.css === "string" ? body.css : undefined,
@@ -120,20 +120,20 @@ export function buildApp() {
     }
   });
 
-  app.delete("/api/canvases/:id", async (c) => {
+  app.delete("/api/plates/:id", async (c) => {
     try {
-      await deleteCanvas(c.req.param("id"));
+      await deletePlate(c.req.param("id"));
       return c.json({ ok: true });
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }
   });
 
-  app.get("/api/canvases/:id/versions", async (c) => {
+  app.get("/api/plates/:id/versions", async (c) => {
     return c.json(await listVersions(c.req.param("id")));
   });
 
-  app.post("/api/canvases/:id/restore", async (c) => {
+  app.post("/api/plates/:id/restore", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
     const version = String(body.version ?? "");
@@ -162,7 +162,7 @@ export async function startServer(port: number): Promise<{ url: string; stop: ()
 }
 
 function safeFilename(s: string): string {
-  return s.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "canvas";
+  return s.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "plate";
 }
 
 // ---------------------------------------------------------------------------
@@ -294,25 +294,25 @@ interface GallerySummary {
   updatedAt: string;
 }
 
-function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
+function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", year: "numeric",
   }).toUpperCase();
 
-  const total = canvases.length;
+  const total = plates.length;
   const totalPad = String(total).padStart(2, "0");
 
-  const cards = canvases.map((c, i) => {
+  const cards = plates.map((c, i) => {
     const plate = String(i + 1).padStart(2, "0");
     return `
-    <a class="plate" href="/c/${encodeURIComponent(c.id)}" style="--i:${i}">
+    <a class="plate" href="/p/${encodeURIComponent(c.id)}" style="--i:${i}">
       <header class="plate-head">
         <span class="plate-no">PLATE Nº ${plate} / ${totalPad}</span>
         <span class="plate-date">${formatRelative(c.updatedAt)}</span>
       </header>
       ${c.source ? `<div class="plate-source" title="Authored by ${escapeHtml(c.source)}">via ${escapeHtml(c.source)}</div>` : ``}
       <div class="plate-frame">
-        <iframe src="/c/${encodeURIComponent(c.id)}/raw" sandbox="allow-scripts" loading="lazy" tabindex="-1"></iframe>
+        <iframe src="/p/${encodeURIComponent(c.id)}/raw" sandbox="allow-scripts" loading="lazy" tabindex="-1"></iframe>
         <div class="plate-frame-mask"></div>
       </div>
       <div class="plate-caption">
@@ -335,7 +335,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
       <p>Connect this archive to an AI client over MCP, then ask it to make something.</p>
       <pre class="recipe"><code>{
   "mcpServers": {
-    "canvas": { "command": "canvas", "args": ["mcp"] }
+    "plate": { "command": "plate", "args": ["mcp"] }
   }
 }</code></pre>
     </div>` : "";
@@ -343,7 +343,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
   const body = `
 <header class="masthead">
   <div class="masthead-row">
-    <span class="eyebrow">UC ⁄ Universal Canvas ⁄ Vol. I</span>
+    <span class="eyebrow">PL ⁄ Plate ⁄ Vol. I</span>
     <span class="eyebrow">${today}</span>
   </div>
   <h1 class="masthead-title">
@@ -554,7 +554,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
   document.getElementById('new')?.addEventListener('click', async () => {
     const title = prompt('Title?', 'Untitled');
     if (title === null) return;
-    const res = await fetch('/api/canvases', {
+    const res = await fetch('/api/plates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -567,10 +567,10 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
     if (res.ok) { const m = await res.json(); location.href = '/c/' + m.id; }
   });
 </script>`;
-  return pageShell("The Archive — Universal Canvas", body);
+  return pageShell("The Archive — Plate", body);
 }
 
-function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]): string {
+function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[]): string {
   const themeOptions = themes.map(t =>
     `<option value="${escapeHtml(t)}"${t === meta.theme ? " selected" : ""}>${escapeHtml(t)}</option>`
   ).join("");
@@ -606,13 +606,13 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     <div class="frame-corner bl"></div>
     <div class="frame-corner br"></div>
     <button class="fs-btn" id="fs-btn" type="button" title="Fullscreen — F · Esc to exit"><span class="fs-icon"></span></button>
-    <iframe id="frame" src="/c/${encodeURIComponent(meta.id)}/raw" sandbox="allow-scripts" allowfullscreen allow="fullscreen"></iframe>
+    <iframe id="frame" src="/p/${encodeURIComponent(meta.id)}/raw" sandbox="allow-scripts" allowfullscreen allow="fullscreen"></iframe>
   </section>
 
   <aside class="drawer">
     <section class="dsec">
       <div class="eyebrow">Description</div>
-      <textarea id="description" rows="2" placeholder="One or two sentences. What is this canvas?">${escapeHtml(meta.description)}</textarea>
+      <textarea id="description" rows="2" placeholder="One or two sentences. What is this plate?">${escapeHtml(meta.description)}</textarea>
     </section>
 
     <section class="dsec">
@@ -648,9 +648,9 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     <section class="dsec">
       <div class="eyebrow">Export</div>
       <div class="export-row">
-        <a href="/c/${encodeURIComponent(meta.id)}/export.md" class="export-link" download>Markdown</a>
-        <a href="/c/${encodeURIComponent(meta.id)}/export.html" class="export-link" download>Standalone HTML</a>
-        <a href="/c/${encodeURIComponent(meta.id)}/print" class="export-link" target="_blank" rel="noopener">PDF (Print sheet)</a>
+        <a href="/p/${encodeURIComponent(meta.id)}/export.md" class="export-link" download>Markdown</a>
+        <a href="/p/${encodeURIComponent(meta.id)}/export.html" class="export-link" download>Standalone HTML</a>
+        <a href="/p/${encodeURIComponent(meta.id)}/print" class="export-link" target="_blank" rel="noopener">PDF (Print sheet)</a>
       </div>
       <div class="export-note">PDF opens the browser's print dialog — choose “Save as PDF.”</div>
     </section>
@@ -963,7 +963,7 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   const reload = () => { frame.src = frame.src; };
 
   async function patch(body) {
-    const res = await fetch('/api/canvases/' + encodeURIComponent(id), {
+    const res = await fetch('/api/plates/' + encodeURIComponent(id), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -1111,14 +1111,14 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
 
   document.getElementById('delete').addEventListener('click', async () => {
     if (!confirm('Move this specimen to the trash?')) return;
-    const res = await fetch('/api/canvases/' + encodeURIComponent(id), { method: 'DELETE' });
+    const res = await fetch('/api/plates/' + encodeURIComponent(id), { method: 'DELETE' });
     if (res.ok) location.href = '/';
   });
 
   document.querySelectorAll('[data-restore]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const version = btn.getAttribute('data-restore');
-      const res = await fetch('/api/canvases/' + encodeURIComponent(id) + '/restore', {
+      const res = await fetch('/api/plates/' + encodeURIComponent(id) + '/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ version }),

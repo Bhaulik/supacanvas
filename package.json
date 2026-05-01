@@ -1,16 +1,17 @@
 {
-  "name": "universal-canvas",
-  "version": "0.1.0",
-  "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. AI-agnostic alternative to Claude Artifacts — files on disk, themable, versioned, exportable.",
+  "name": "plate-mcp",
+  "version": "0.2.0",
+  "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS plates. AI-agnostic, files on disk, themable, versioned, exportable.",
   "type": "module",
   "license": "MIT",
-  "author": "yabemando@gmail.com",
+  "author": "bhaulik@gmail.com",
   "keywords": [
     "mcp",
     "model-context-protocol",
     "claude",
     "anthropic",
     "ai",
+    "plate",
     "canvas",
     "artifact",
     "llm",
@@ -19,16 +20,16 @@
     "cursor",
     "claude-desktop"
   ],
-  "homepage": "https://github.com/yabemando/universal-canvas",
+  "homepage": "https://github.com/bhaulik/plate",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yabemando/universal-canvas.git"
+    "url": "https://github.com/bhaulik/plate.git"
   },
   "bugs": {
-    "url": "https://github.com/yabemando/universal-canvas/issues"
+    "url": "https://github.com/bhaulik/plate/issues"
   },
   "bin": {
-    "canvas": "./bin/canvas"
+    "plate": "./bin/plate"
   },
   "files": [
     "src/",
