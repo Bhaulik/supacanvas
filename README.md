@@ -17,16 +17,39 @@ Think Claude Artifacts, but:
 
 ## Install
 
-Requires [Bun](https://bun.sh) ≥ 1.1.
+**One-liner** (installs Bun if missing, then plate globally):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/bhaulik/plate/main/install.sh | bash
+```
+
+**Manual**:
+
+```sh
+# 1. Bun (https://bun.sh) — required runtime
+curl -fsSL https://bun.sh/install | bash
+
+# 2. Plate
+bun install -g github:bhaulik/plate
+```
+
+**From source** (for hacking on it):
 
 ```sh
 git clone https://github.com/bhaulik/plate.git
-cd plate
-bun install
-bun link              # makes the `plate` command available globally
+cd plate && bun install && bun link
 ```
 
 Storage lives at `~/.plate/` by default. Override with `PLATE_HOME=/some/other/path`.
+
+## Quick start
+
+```sh
+plate setup     # prints MCP config + detects which AI clients you have
+plate serve     # starts the viewer at http://localhost:7777
+```
+
+`plate setup --write` will merge the MCP config into every detected JSON-based client config (Claude Desktop, Cursor, Claude Code) so you don't have to copy-paste.
 
 > Migrating from the pre-rename `canvas` version? Existing data at `~/.canvas/canvases/` is auto-detected and the inner directory is renamed to `~/.canvas/plates/` on first run. Setting `CANVAS_HOME` is also still honored as a fallback.
 

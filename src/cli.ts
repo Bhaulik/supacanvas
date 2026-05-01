@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { homedir } from "node:os";
 import {
   plateHome,
   ensureLayout,
@@ -27,6 +30,7 @@ Usage:
   Server / agent surface
     plate serve [--port N] [--no-open]
     plate mcp                          run MCP server over stdio (for AI clients)
+    plate setup [--write]              show / write MCP config for installed AI clients
 
   CRUD
     plate new --title "..." [content flags] [--json]
@@ -323,6 +327,105 @@ async function main() {
 
     case "where": {
       console.log(plateHome());
+      break;
+    }
+
+    case "setup": {
+      const home = homedir();
+      const plateBin = process.argv[1] && process.argv[1].includes("/.bun/")
+        ? "plate"  // user has it on PATH via bun's global bin
+        : "plate";
+
+      const snippet = {
+        mcpServers: {
+          plate: { command: plateBin, args: ["mcp"] },
+        },
+      };
+
+      // Each client uses the same MCP server config shape, but a different file.
+      // YAML clients (Continue) need a hand-written snippet.
+      interface ClientEntry { name: string; path: string; format: "json" | "yaml"; alt?: string }
+      const clients: ClientEntry[] = [
+        {
+          name: "Claude Desktop",
+          path: join(home, "Library/Application Support/Claude/claude_desktop_config.json"),
+          format: "json",
+        },
+        {
+          name: "Cursor",
+          path: join(home, ".cursor/mcp.json"),
+          format: "json",
+        },
+        {
+          name: "Claude Code",
+          path: join(home, ".claude/settings.json"),
+          format: "json",
+          alt: "claude mcp add plate plate mcp",
+        },
+        {
+          name: "Continue",
+          path: join(home, ".continue/config.yaml"),
+          format: "yaml",
+        },
+      ];
+
+      const installedDetected = clients.some(c => existsSync(c.path));
+      const writeMode = flags.write === true;
+
+      console.log("");
+      console.log("Plate setup");
+      console.log("───────────");
+      console.log("");
+      console.log("Add this to your AI client's MCP config:");
+      console.log("");
+      console.log(JSON.stringify(snippet, null, 2).split("\n").map(l => "    " + l).join("\n"));
+      console.log("");
+      console.log("Detected AI clients on this machine:");
+      for (const c of clients) {
+        const present = existsSync(c.path);
+        const marker = present ? " ✓" : "  ";
+        console.log(`  ${marker} ${c.name.padEnd(16)} ${c.path}${present ? "" : "  (no config yet)"}`);
+        if (c.alt) console.log(`     ${"".padEnd(16)} or: ${c.alt}`);
+      }
+      console.log("");
+
+      if (!installedDetected) {
+        console.log("(no MCP-aware clients detected — install Cursor / Claude Desktop / Claude Code first)");
+        console.log("");
+      }
+
+      if (writeMode) {
+        console.log("Writing config (--write)…");
+        for (const c of clients) {
+          if (c.format !== "json") continue;
+          // Only touch JSON configs we know how to merge safely.
+          await mkdir(dirname(c.path), { recursive: true });
+          let existing: { mcpServers?: Record<string, unknown> } = {};
+          if (existsSync(c.path)) {
+            try { existing = JSON.parse(await readFile(c.path, "utf8")); } catch { /* keep empty */ }
+          }
+          const merged = {
+            ...existing,
+            mcpServers: { ...(existing.mcpServers ?? {}), plate: snippet.mcpServers.plate },
+          };
+          await writeFile(c.path, JSON.stringify(merged, null, 2) + "\n");
+          console.log(`  ✓ wrote ${c.path}`);
+        }
+        console.log("");
+        console.log("Restart any clients you wrote to so they re-read the config.");
+        console.log("");
+      } else {
+        console.log("Add the snippet manually, or re-run with --write to merge it into");
+        console.log("every detected JSON-based config (Continue's YAML config you'll have");
+        console.log("to edit by hand).");
+        console.log("");
+      }
+
+      console.log("Then in another terminal:");
+      console.log("  plate serve");
+      console.log("");
+      console.log("Ask your AI: \"create a plate with a working analog clock\"");
+      console.log("");
       break;
     }
 
