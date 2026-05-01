@@ -1,0 +1,57 @@
+{
+  "name": "universal-canvas",
+  "version": "0.1.0",
+  "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. AI-agnostic alternative to Claude Artifacts — files on disk, themable, versioned, exportable.",
+  "type": "module",
+  "license": "MIT",
+  "author": "yabemando@gmail.com",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "anthropic",
+    "ai",
+    "canvas",
+    "artifact",
+    "llm",
+    "html",
+    "viewer",
+    "cursor",
+    "claude-desktop"
+  ],
+  "homepage": "https://github.com/yabemando/universal-canvas",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yabemando/universal-canvas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yabemando/universal-canvas/issues"
+  },
+  "bin": {
+    "canvas": "./bin/canvas"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "serve": "bun run src/cli.ts serve",
+    "mcp": "bun run src/cli.ts mcp",
+    "dev": "bun --hot run src/cli.ts serve",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "hono": "^4.6.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
