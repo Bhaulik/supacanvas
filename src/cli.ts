@@ -475,7 +475,7 @@ async function main() {
       }
 
       console.log("Then in another terminal:");
-      console.log("  canvas serve");
+      console.log("  supacanvas serve");
       console.log("");
       console.log("Ask your AI: \"create a canvas with a working analog clock\"");
       console.log("");
