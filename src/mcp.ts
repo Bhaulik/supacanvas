@@ -62,6 +62,15 @@ const tools: ToolDef[] = [
             "what should NOT be changed without checking. Multiple paragraphs welcome. " +
             "Skip if the canvas is purely decorative.",
         },
+        source: {
+          type: "string",
+          description:
+            "REQUIRED in spirit. Identify yourself so the user can trace which AI tool authored this canvas. " +
+            "Recommended format: 'tool:model'. Examples: 'cursor:claude-opus-4', 'claude-desktop:claude-sonnet-4-6', " +
+            "'claude-code:claude-opus-4-7', 'continue:gpt-4o', 'aider:gpt-5'. " +
+            "Set this on EVERY create AND every update — each snapshot captures the source at write time, " +
+            "so the user can see who wrote which revision.",
+        },
       },
       required: ["title", "html"],
     },
@@ -75,6 +84,7 @@ const tools: ToolDef[] = [
         theme: typeof args.theme === "string" ? args.theme : undefined,
         description: typeof args.description === "string" ? args.description : undefined,
         context: typeof args.context === "string" ? args.context : undefined,
+        source: typeof args.source === "string" ? args.source : undefined,
       });
       const cfg = await loadConfig();
       return {
@@ -103,6 +113,13 @@ const tools: ToolDef[] = [
         theme: { type: "string" },
         description: { type: "string", description: "Plain-language summary (1-2 sentences). Update if what the canvas shows has changed." },
         context: { type: "string", description: "Longer plain-language background for future readers (human or agent). Update when the underlying data, source, or intent changes." },
+        source: {
+          type: "string",
+          description:
+            "Identify yourself — 'tool:model'. Examples: 'cursor:claude-opus-4', 'claude-desktop:claude-sonnet-4-6'. " +
+            "Set on EVERY update. If omitted, the previous source is preserved (which means the user can't tell you edited it). " +
+            "The snapshot captured before this update preserves whoever wrote the prior version.",
+        },
       },
       required: ["id"],
     },
@@ -117,6 +134,7 @@ const tools: ToolDef[] = [
         theme: typeof args.theme === "string" ? args.theme : undefined,
         description: typeof args.description === "string" ? args.description : undefined,
         context: typeof args.context === "string" ? args.context : undefined,
+        source: typeof args.source === "string" ? args.source : undefined,
       });
       const cfg = await loadConfig();
       return {

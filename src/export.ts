@@ -11,6 +11,7 @@ export function toMarkdown(canvas: Canvas): string {
     `description: ${jsonString(meta.description)}`,
     `tags: [${meta.tags.map(jsonString).join(", ")}]`,
     `theme: ${meta.theme}`,
+    `source: ${jsonString(meta.source)}`,
     `created: ${meta.createdAt}`,
     `updated: ${meta.updatedAt}`,
     "---",
@@ -51,6 +52,7 @@ export async function toStandaloneHtml(canvas: Canvas): Promise<string> {
 <meta name="generator" content="universal-canvas" />
 <meta name="canvas-id" content="${escapeHtml(canvas.meta.id)}" />
 <meta name="canvas-theme" content="${escapeHtml(canvas.meta.theme)}" />
+<meta name="canvas-source" content="${escapeHtml(canvas.meta.source)}" />
 <meta name="description" content="${escapeHtml(canvas.meta.description)}" />
 ${contextBlock}<title>${escapeHtml(canvas.meta.title)}</title>
 <style data-canvas-theme="${escapeHtml(canvas.meta.theme)}">

@@ -15,6 +15,13 @@ export interface CanvasMeta {
   context: string;
   tags: string[];
   theme: string;
+  /**
+   * Free-form provenance string identifying the AI tool/model that last wrote
+   * to this canvas. Recommended format: "tool:model" (e.g. "cursor:claude-opus-4",
+   * "claude-desktop:claude-sonnet-4-6", "claude-code:claude-opus-4-7"). May be
+   * empty for canvases authored manually or by tools that don't identify themselves.
+   */
+  source: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,12 +39,15 @@ export interface CanvasSummary {
   description: string;
   tags: string[];
   theme: string;
+  source: string;
   updatedAt: string;
 }
 
 export interface SnapshotInfo {
   version: string;
   timestamp: string;
+  /** Source captured in the snapshot's own meta.json — who wrote that revision. */
+  source: string;
 }
 
 export interface AppConfig {

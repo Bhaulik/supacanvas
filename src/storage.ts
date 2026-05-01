@@ -84,6 +84,7 @@ async function readMeta(id: string): Promise<CanvasMeta | null> {
       context: parsed.context ?? "",
       tags: Array.isArray(parsed.tags) ? parsed.tags : [],
       theme: parsed.theme ?? "default",
+      source: parsed.source ?? "",
       createdAt: parsed.createdAt ?? new Date().toISOString(),
       updatedAt: parsed.updatedAt ?? parsed.createdAt ?? new Date().toISOString(),
     };
@@ -110,6 +111,7 @@ export interface CreateInput {
   theme?: string;
   description?: string;
   context?: string;
+  source?: string;
 }
 
 export async function createCanvas(input: CreateInput): Promise<CanvasMeta> {
@@ -126,6 +128,7 @@ export async function createCanvas(input: CreateInput): Promise<CanvasMeta> {
     context: (input.context ?? "").trim(),
     tags: input.tags ?? [],
     theme: input.theme ?? cfg.defaultTheme,
+    source: (input.source ?? "").trim(),
     createdAt: now,
     updatedAt: now,
   };
@@ -147,6 +150,7 @@ export interface UpdateInput {
   theme?: string;
   description?: string;
   context?: string;
+  source?: string;
 }
 
 export async function updateCanvas(id: string, input: UpdateInput): Promise<{ meta: CanvasMeta; version: string }> {
@@ -161,6 +165,7 @@ export async function updateCanvas(id: string, input: UpdateInput): Promise<{ me
     context: input.context ?? existing.meta.context,
     tags: input.tags ?? existing.meta.tags,
     theme: input.theme ?? existing.meta.theme,
+    source: input.source ?? existing.meta.source,
     updatedAt: new Date().toISOString(),
   };
   const next: Canvas = {
@@ -205,6 +210,7 @@ export async function listCanvases(opts: { tag?: string; search?: string; limit?
         meta.description,
         meta.context,
         meta.tags.join(" "),
+        meta.source,
       ].join(" ").toLowerCase();
       if (!haystack.includes(q)) continue;
     }
@@ -214,6 +220,7 @@ export async function listCanvases(opts: { tag?: string; search?: string; limit?
       description: meta.description,
       tags: meta.tags,
       theme: meta.theme,
+      source: meta.source,
       updatedAt: meta.updatedAt,
     });
   }
@@ -259,12 +266,18 @@ async function pruneVersions(id: string): Promise<void> {
 export async function listVersions(id: string): Promise<SnapshotInfo[]> {
   const dir = versionsDir(id);
   if (!existsSync(dir)) return [];
-  const entries = await readdir(dir);
-  return entries
-    .filter(e => !e.startsWith("."))
-    .sort()
-    .reverse()
-    .map(version => ({ version, timestamp: version }));
+  const entries = (await readdir(dir)).filter(e => !e.startsWith(".")).sort().reverse();
+  const out: SnapshotInfo[] = [];
+  for (const version of entries) {
+    let source = "";
+    try {
+      const raw = await readFile(join(dir, version, FILES.meta), "utf8");
+      const m = JSON.parse(raw) as Partial<CanvasMeta>;
+      source = m.source ?? "";
+    } catch { /* snapshot missing meta — leave source blank */ }
+    out.push({ version, timestamp: version, source });
+  }
+  return out;
 }
 
 export async function restoreVersion(id: string, version: string): Promise<{ restoredFrom: string }> {

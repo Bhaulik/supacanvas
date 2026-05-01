@@ -13,7 +13,7 @@ import {
 } from "./storage.ts";
 import { renderCanvasDoc, escapeHtml } from "./render.ts";
 import { toMarkdown, toStandaloneHtml, toPrintHtml } from "./export.ts";
-import type { CanvasMeta } from "./types.ts";
+import type { CanvasMeta, SnapshotInfo } from "./types.ts";
 
 export function buildApp() {
   const app = new Hono();
@@ -29,7 +29,7 @@ export function buildApp() {
     if (!canvas) return c.notFound();
     const themes = await listThemes();
     const versions = await listVersions(canvas.meta.id);
-    return c.html(viewerHtml(canvas.meta, themes, versions.map(v => v.version)));
+    return c.html(viewerHtml(canvas.meta, themes, versions));
   });
 
   // The actual canvas content, served into a sandboxed iframe.
@@ -88,6 +88,7 @@ export function buildApp() {
       theme: typeof body.theme === "string" ? body.theme : undefined,
       description: typeof body.description === "string" ? body.description : undefined,
       context: typeof body.context === "string" ? body.context : undefined,
+      source: typeof body.source === "string" ? body.source : undefined,
     });
     return c.json(meta, 201);
   });
@@ -111,6 +112,7 @@ export function buildApp() {
         theme: typeof body.theme === "string" ? body.theme : undefined,
         description: typeof body.description === "string" ? body.description : undefined,
         context: typeof body.context === "string" ? body.context : undefined,
+        source: typeof body.source === "string" ? body.source : undefined,
       });
       return c.json(result);
     } catch (e) {
@@ -288,6 +290,7 @@ interface GallerySummary {
   description: string;
   tags: string[];
   theme: string;
+  source: string;
   updatedAt: string;
 }
 
@@ -307,6 +310,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
         <span class="plate-no">PLATE Nº ${plate} / ${totalPad}</span>
         <span class="plate-date">${formatRelative(c.updatedAt)}</span>
       </header>
+      ${c.source ? `<div class="plate-source" title="Authored by ${escapeHtml(c.source)}">via ${escapeHtml(c.source)}</div>` : ``}
       <div class="plate-frame">
         <iframe src="/c/${encodeURIComponent(c.id)}/raw" sandbox="allow-scripts" loading="lazy" tabindex="-1"></iframe>
         <div class="plate-frame-mask"></div>
@@ -489,6 +493,16 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
     letter-spacing: 0.04em;
     margin-top: 2px;
   }
+  .plate-source {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .empty {
     text-align: center;
@@ -556,7 +570,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
   return pageShell("The Archive — Universal Canvas", body);
 }
 
-function viewerHtml(meta: CanvasMeta, themes: string[], versions: string[]): string {
+function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]): string {
   const themeOptions = themes.map(t =>
     `<option value="${escapeHtml(t)}"${t === meta.theme ? " selected" : ""}>${escapeHtml(t)}</option>`
   ).join("");
@@ -565,8 +579,11 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: string[]): str
     ? `<div class="empty-note">No revisions on file. Snapshots appear after each AI edit.</div>`
     : versions.map(v => `
         <div class="revision">
-          <code class="mono">${escapeHtml(formatVersion(v))}</code>
-          <button data-restore="${escapeHtml(v)}">Restore</button>
+          <div class="revision-meta">
+            <code class="mono">${escapeHtml(formatVersion(v.version))}</code>
+            ${v.source ? `<span class="revision-source">via ${escapeHtml(v.source)}</span>` : ``}
+          </div>
+          <button data-restore="${escapeHtml(v.version)}">Restore</button>
         </div>`).join("");
 
   const body = `
@@ -636,6 +653,13 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: string[]): str
         <a href="/c/${encodeURIComponent(meta.id)}/print" class="export-link" target="_blank" rel="noopener">PDF (Print sheet)</a>
       </div>
       <div class="export-note">PDF opens the browser's print dialog — choose “Save as PDF.”</div>
+    </section>
+
+    <section class="dsec">
+      <div class="eyebrow">Source</div>
+      ${meta.source
+        ? `<code class="mono source-tag">${escapeHtml(meta.source)}</code>`
+        : `<div class="empty-note">No source recorded. AI tools should pass <code>source</code> on each edit.</div>`}
     </section>
 
     <section class="dsec">
@@ -878,8 +902,30 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: string[]): str
     border-bottom: 1px solid var(--rule);
   }
   .revision:last-child { border-bottom: 0; }
+  .revision-meta { display: grid; gap: 2px; min-width: 0; }
   .revision code { font-size: 12px; color: var(--ink-2); }
+  .revision-source {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .revisions .empty-note { font-size: 13px; color: var(--muted); padding: 4px 0 2px; }
+  .source-tag {
+    display: inline-block;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--rule-2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    letter-spacing: 0.02em;
+  }
+  .dsec .empty-note { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .dsec .empty-note code { font-family: var(--mono); font-size: 12px; padding: 1px 5px; background: var(--card); border: 1px solid var(--rule); border-radius: 4px; }
 
   .export-row { display: flex; flex-direction: column; gap: 0; padding-top: 4px; }
   .export-link {
