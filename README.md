@@ -17,23 +17,25 @@ Think Claude Artifacts, but:
 
 ## Install
 
-**One-liner** (installs Bun if missing, then supacanvas globally):
+**Plain npm** (works on Node ≥ 18 — no other runtime needed):
+
+```sh
+npm install -g supacanvas
+```
+
+**Or via Bun**:
+
+```sh
+bun install -g supacanvas
+```
+
+**One-liner** (auto-installs Bun if missing, then supacanvas):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/bhaulik/supacanvas/main/install.sh | bash
 ```
 
-**Manual**:
-
-```sh
-# 1. Bun (https://bun.sh) — required runtime
-curl -fsSL https://bun.sh/install | bash
-
-# 2. Supacanvas
-bun install -g github:bhaulik/supacanvas
-```
-
-**From source** (for hacking on it):
+**From source** (for hacking on it — Bun is the dev runtime):
 
 ```sh
 git clone https://github.com/bhaulik/supacanvas.git
@@ -42,8 +44,7 @@ cd supacanvas && bun install && bun link
 
 Storage lives at `~/.supacanvas/` by default. Override with `SUPACANVAS_HOME=/some/other/path`.
 
-> **Carrying data from earlier names?** `~/.plate/` and `~/.canvas/` are auto-detected as fallbacks if `~/.supacanvas/` doesn't exist yet, and a legacy `plates/` subdir is renamed to `canvases/` on first run. `PLATE_HOME` and `CANVAS_HOME` env vars still resolve correctly.
-
+> **Carrying data from earlier names?** `~/.plate/` and `~/.canvas/` are auto-detected as fallbacks if `~/.supacanvas/` doesnt exist yet. `PLATE_HOME` and `CANVAS_HOME` env vars still resolve correctly.
 ## Quick start
 
 ```sh
