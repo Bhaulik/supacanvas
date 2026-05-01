@@ -387,13 +387,11 @@ async function main() {
 
     case "setup": {
       const home = homedir();
-      const binName = process.argv[1] && process.argv[1].includes("/.bun/")
-        ? "canvas"  // user has it on PATH via bun's global bin
-        : "canvas";
+      const binName = "supacanvas";
 
       const snippet = {
         mcpServers: {
-          canvas: { command: binName, args: ["mcp"] },
+          supacanvas: { command: binName, args: ["mcp"] },
         },
       };
 
@@ -415,7 +413,7 @@ async function main() {
           name: "Claude Code",
           path: join(home, ".claude/settings.json"),
           format: "json",
-          alt: "claude mcp add canvas canvas mcp",
+          alt: "claude mcp add supacanvas supacanvas mcp",
         },
         {
           name: "Continue",
@@ -428,8 +426,8 @@ async function main() {
       const writeMode = flags.write === true;
 
       console.log("");
-      console.log("Canvas setup");
-      console.log("───────────");
+      console.log("Supacanvas setup");
+      console.log("────────────────");
       console.log("");
       console.log("Add this to your AI client's MCP config:");
       console.log("");
@@ -461,7 +459,7 @@ async function main() {
           }
           const merged = {
             ...existing,
-            mcpServers: { ...(existing.mcpServers ?? {}), canvas: snippet.mcpServers.canvas },
+            mcpServers: { ...(existing.mcpServers ?? {}), supacanvas: snippet.mcpServers.supacanvas },
           };
           await writeFile(c.path, JSON.stringify(merged, null, 2) + "\n");
           console.log(`  ✓ wrote ${c.path}`);
