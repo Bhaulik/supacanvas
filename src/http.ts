@@ -417,10 +417,14 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[], folders: Fol
     <div class="empty">
       <div class="empty-rule"></div>
       <h2 class="serif italic">Awaiting first specimen.</h2>
-      <p>Connect this archive to an AI client over MCP, then ask it to make something.</p>
+      <p>Connect Supacanvas to your AI tool, then ask it to make something.</p>
+      <div class="empty-actions">
+        <a class="cta-primary cta-large" href="/install">+ Add to Cursor / Claude / VS Code</a>
+      </div>
+      <p class="empty-or">or paste this into your client's MCP config by hand:</p>
       <pre class="recipe"><code>{
   "mcpServers": {
-    "canvas": { "command": "canvas", "args": ["mcp"] }
+    "supacanvas": { "command": "supacanvas", "args": ["mcp"] }
   }
 }</code></pre>
     </div>` : "";
@@ -443,7 +447,10 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[], folders: Fol
   <hr />
   <div class="toolbar">
     <input id="search" placeholder="Search the archive…" autocomplete="off" />
-    <button id="new">+ Catalog blank</button>
+    <div class="toolbar-cta">
+      <a class="cta-primary" href="/install">+ Connect to AI tool</a>
+      <button id="new" class="cta-secondary">+ Catalog blank</button>
+    </div>
   </div>
   ${folders.length > 0 ? folderChips : ""}
 </header>
@@ -485,9 +492,45 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[], folders: Fol
   .masthead-title .title-italic { font-style: italic; font-weight: 400; }
   .masthead-title .title-mark { font-style: italic; color: var(--accent); font-size: 0.42em; align-self: flex-start; transform: translateY(0.5em); margin-left: 0.05em; }
   .masthead-meta { padding-bottom: 16px; }
-  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 0 4px; }
-  .toolbar input { width: 320px; max-width: 60%; font-family: var(--serif); font-style: italic; font-size: 18px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 0 4px; flex-wrap: wrap; }
+  .toolbar input { width: 320px; max-width: 60%; font-family: var(--serif); font-style: italic; font-size: 18px; flex: 1 1 320px; }
   .toolbar input::placeholder { color: var(--muted); font-style: italic; }
+  .toolbar-cta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+  /* Primary CTA — the "Connect AI tool" button. Filled accent, stands out. */
+  .cta-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.10em;
+    text-transform: uppercase; font-weight: 500;
+    background: var(--accent); color: var(--card);
+    padding: 8px 14px;
+    border-radius: 999px;
+    text-decoration: none; border-bottom: 0;
+    transition: background 180ms var(--easing), transform 180ms var(--easing), color 180ms var(--easing);
+  }
+  .cta-primary:hover {
+    background: var(--ink); color: var(--card);
+    transform: translateY(-1px);
+    border-bottom: 0; text-decoration: none;
+  }
+  .cta-primary.cta-large {
+    font-size: 13px; padding: 11px 22px; letter-spacing: 0.08em;
+  }
+
+  /* Secondary action — keeps the existing button styling but de-emphasized next to the primary CTA. */
+  .cta-secondary {
+    background: transparent;
+    color: var(--ink-2);
+  }
+
+  .empty-actions {
+    margin: 8px 0 24px;
+  }
+  .empty-or {
+    font-size: 13px; color: var(--muted); margin: 16px 0 12px;
+    font-style: italic;
+  }
 
   /* Folder filter chips */
   .folder-bar {
