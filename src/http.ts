@@ -441,7 +441,7 @@ function galleryHtml(canvases: GallerySummary[], _themes: string[], folders: Fol
     <span class="title-mark">№</span>
   </h1>
   <div class="masthead-row masthead-meta">
-    <span class="eyebrow">Your AI-generated canvases — held on disk, viewable in browser, exportable anywhere.</span>
+    <span class="eyebrow">Understand what your Agents are doing — visually, easily.</span>
     <span class="eyebrow">${total} ${total === 1 ? "specimen" : "specimens"}</span>
   </div>
   <hr />
