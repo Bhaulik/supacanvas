@@ -30,31 +30,31 @@ const HELP = `supacanvas — local-first MCP for AI-generated views
 
 Usage:
   Server / agent surface
-    canvas serve [--port N] [--no-open]
-    canvas mcp                          run MCP server over stdio (for AI clients)
-    canvas setup [--write]              show / write MCP config for installed AI clients
+    supacanvas serve [--port N] [--no-open]
+    supacanvas mcp                          run MCP server over stdio (for AI clients)
+    supacanvas setup [--write]              show / write MCP config for installed AI clients
 
   CRUD
-    canvas new --title "..." [content flags] [--json]
-    canvas get <id> [--field html|css|js|meta] [--json]
-    canvas update <id> [content flags] [--json]
-    canvas list [--tag T] [--search Q] [--limit N] [--json]
-    canvas rm <id>                      soft-delete (move to trash/)
-    canvas open <id>                    open in browser
+    supacanvas new --title "..." [content flags] [--json]
+    supacanvas get <id> [--field html|css|js|meta] [--json]
+    supacanvas update <id> [content flags] [--json]
+    supacanvas list [--tag T] [--search Q] [--limit N] [--json]
+    supacanvas rm <id>                      soft-delete (move to trash/)
+    supacanvas open <id>                    open in browser
 
   Versions / export / screenshot
-    canvas versions <id> [--json]
-    canvas restore <id> --version <ts> [--json]
-    canvas export <id> --format md|html [--out path]
-    canvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]
+    supacanvas versions <id> [--json]
+    supacanvas restore <id> --version <ts> [--json]
+    supacanvas export <id> --format md|html [--out path]
+    supacanvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]
 
   Tags / themes / config
-    canvas tags [--json]                tag corpus across all canvases
-    canvas theme list
-    canvas theme add <name> <path>
-    canvas config get [key]
-    canvas config set <key> <value>     keys: port | defaultTheme | maxVersions
-    canvas where                        print storage directory
+    supacanvas tags [--json]                tag corpus across all canvases
+    supacanvas theme list
+    supacanvas theme add <name> <path>
+    supacanvas config get [key]
+    supacanvas config set <key> <value>     keys: port | defaultTheme | maxVersions
+    supacanvas where                        print storage directory
 
 Content flags (for new + update):
   --html "..."        --html-file <path>     --html-stdin
@@ -64,12 +64,12 @@ Content flags (for new + update):
   --tags a,b,c        --theme name           --source "tool:model"
 
 Examples (agent-friendly):
-  ID=$(canvas new --title "Dashboard" --html-file out.html --description "Q2 numbers" \\
+  ID=$(supacanvas new --title "Dashboard" --html-file out.html --description "Q2 numbers" \\
                   --source "shell-agent:gpt-5" --json | jq -r .id)
-  canvas update "$ID" --css-stdin <<< 'body { font: 14px system-ui; }'
-  canvas screenshot "$ID" --out /tmp/dashboard.png --dpr 2
-  canvas export "$ID" --format md > dashboard.md
-  canvas get "$ID" --field html > current.html
+  supacanvas update "$ID" --css-stdin <<< 'body { font: 14px system-ui; }'
+  supacanvas screenshot "$ID" --out /tmp/dashboard.png --dpr 2
+  supacanvas export "$ID" --format md > dashboard.md
+  supacanvas get "$ID" --field html > current.html
 `;
 
 function parseFlags(argv: string[]): { positional: string[]; flags: Record<string, string | true> } {
@@ -182,7 +182,7 @@ async function main() {
 
     case "open": {
       const id = positional[0];
-      if (!id) { console.error("usage: canvas open <id>"); process.exit(2); }
+      if (!id) { console.error("usage: supacanvas open <id>"); process.exit(2); }
       const cfg = await loadConfig();
       const url = `http://localhost:${cfg.port}/c/${id}`;
       console.log(url);
@@ -192,7 +192,7 @@ async function main() {
 
     case "get": {
       const id = positional[0];
-      if (!id) { console.error("usage: canvas get <id> [--field html|css|js|meta] [--json]"); process.exit(2); }
+      if (!id) { console.error("usage: supacanvas get <id> [--field html|css|js|meta] [--json]"); process.exit(2); }
       const canvas = await getCanvas(id);
       if (!canvas) { console.error(`canvas not found: ${id}`); process.exit(1); }
       const field = typeof flags.field === "string" ? flags.field : null;
@@ -234,7 +234,7 @@ async function main() {
 
     case "update": {
       const id = positional[0];
-      if (!id) { console.error("usage: canvas update <id> [flags]"); process.exit(2); }
+      if (!id) { console.error("usage: supacanvas update <id> [flags]"); process.exit(2); }
       const title = typeof flags.title === "string" ? flags.title : undefined;
       const html = await readContent(flags, "html");
       const css = await readContent(flags, "css");
@@ -289,7 +289,7 @@ async function main() {
 
     case "rm": {
       const id = positional[0];
-      if (!id) { console.error("usage: canvas rm <id>"); process.exit(2); }
+      if (!id) { console.error("usage: supacanvas rm <id>"); process.exit(2); }
       await deleteCanvas(id);
       console.log(`moved to trash: ${id}`);
       break;
@@ -297,7 +297,7 @@ async function main() {
 
     case "versions": {
       const id = positional[0];
-      if (!id) { console.error("usage: canvas versions <id> [--json]"); process.exit(2); }
+      if (!id) { console.error("usage: supacanvas versions <id> [--json]"); process.exit(2); }
       const versions = await listVersions(id);
       if (flags.json) { console.log(JSON.stringify(versions, null, 2)); break; }
       if (versions.length === 0) { console.log("(no revisions on file)"); break; }
@@ -311,7 +311,7 @@ async function main() {
     case "restore": {
       const id = positional[0];
       const version = typeof flags.version === "string" ? flags.version : null;
-      if (!id || !version) { console.error("usage: canvas restore <id> --version <timestamp>"); process.exit(2); }
+      if (!id || !version) { console.error("usage: supacanvas restore <id> --version <timestamp>"); process.exit(2); }
       const result = await restoreVersion(id, version);
       if (flags.json) { console.log(JSON.stringify(result, null, 2)); break; }
       console.log(`restored ${id} from ${result.restoredFrom}`);
@@ -322,7 +322,7 @@ async function main() {
       const id = positional[0];
       const format = typeof flags.format === "string" ? flags.format : null;
       if (!id || (format !== "md" && format !== "markdown" && format !== "html")) {
-        console.error("usage: canvas export <id> --format md|html [--out path]");
+        console.error("usage: supacanvas export <id> --format md|html [--out path]");
         process.exit(2);
       }
       const canvas = await getCanvas(id);
@@ -340,7 +340,7 @@ async function main() {
 
     case "screenshot": {
       const id = positional[0];
-      if (!id) { console.error("usage: canvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]"); process.exit(2); }
+      if (!id) { console.error("usage: supacanvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]"); process.exit(2); }
       const canvas = await getCanvas(id);
       if (!canvas) { console.error(`canvas not found: ${id}`); process.exit(1); }
       const png = await screenshotCanvas(canvas, {
@@ -488,12 +488,12 @@ async function main() {
         for (const t of await listThemes()) console.log(t);
       } else if (sub === "add") {
         const name = positional[1]; const path = positional[2];
-        if (!name || !path) { console.error("usage: canvas theme add <name> <path>"); process.exit(2); }
+        if (!name || !path) { console.error("usage: supacanvas theme add <name> <path>"); process.exit(2); }
         const css = await readFile(path, "utf8");
         await addTheme(name, css);
         console.log(`installed theme: ${name}`);
       } else {
-        console.error("usage: canvas theme list | canvas theme add <name> <path>");
+        console.error("usage: supacanvas theme list | canvas theme add <name> <path>");
         process.exit(2);
       }
       break;
@@ -508,14 +508,14 @@ async function main() {
         console.log((cfg as unknown as Record<string, unknown>)[key]);
       } else if (sub === "set") {
         const key = positional[1]; const val = positional[2];
-        if (!key || val === undefined) { console.error("usage: canvas config set <key> <value>"); process.exit(2); }
+        if (!key || val === undefined) { console.error("usage: supacanvas config set <key> <value>"); process.exit(2); }
         const next = { ...cfg } as unknown as Record<string, unknown>;
         if (key === "port" || key === "maxVersions") next[key] = Number(val);
         else next[key] = val;
         await saveConfig(next as unknown as typeof cfg);
         console.log(JSON.stringify(next, null, 2));
       } else {
-        console.error("usage: canvas config get [key] | canvas config set <key> <value>");
+        console.error("usage: supacanvas config get [key] | canvas config set <key> <value>");
         process.exit(2);
       }
       break;
