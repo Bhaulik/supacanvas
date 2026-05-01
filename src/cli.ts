@@ -4,55 +4,55 @@ import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import {
-  plateHome,
+  supacanvasHome,
   ensureLayout,
-  listPlates,
+  listCanvases,
   loadConfig,
   saveConfig,
-  deletePlate,
+  deleteCanvas,
   listThemes,
   listAllTags,
   addTheme,
-  createPlate,
-  updatePlate,
-  getPlate,
+  createCanvas,
+  updateCanvas,
+  getCanvas,
   listVersions,
   restoreVersion,
 } from "./storage.ts";
 import { startServer } from "./http.ts";
 import { startMcpServer } from "./mcp.ts";
 import { toMarkdown, toStandaloneHtml } from "./export.ts";
-import { screenshotPlate } from "./screenshot.ts";
+import { screenshotCanvas } from "./screenshot.ts";
 
-const HELP = `plate — local-first MCP for AI-generated views
+const HELP = `supacanvas — local-first MCP for AI-generated views
 
 Usage:
   Server / agent surface
-    plate serve [--port N] [--no-open]
-    plate mcp                          run MCP server over stdio (for AI clients)
-    plate setup [--write]              show / write MCP config for installed AI clients
+    canvas serve [--port N] [--no-open]
+    canvas mcp                          run MCP server over stdio (for AI clients)
+    canvas setup [--write]              show / write MCP config for installed AI clients
 
   CRUD
-    plate new --title "..." [content flags] [--json]
-    plate get <id> [--field html|css|js|meta] [--json]
-    plate update <id> [content flags] [--json]
-    plate list [--tag T] [--search Q] [--limit N] [--json]
-    plate rm <id>                      soft-delete (move to trash/)
-    plate open <id>                    open in browser
+    canvas new --title "..." [content flags] [--json]
+    canvas get <id> [--field html|css|js|meta] [--json]
+    canvas update <id> [content flags] [--json]
+    canvas list [--tag T] [--search Q] [--limit N] [--json]
+    canvas rm <id>                      soft-delete (move to trash/)
+    canvas open <id>                    open in browser
 
   Versions / export / screenshot
-    plate versions <id> [--json]
-    plate restore <id> --version <ts> [--json]
-    plate export <id> --format md|html [--out path]
-    plate screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]
+    canvas versions <id> [--json]
+    canvas restore <id> --version <ts> [--json]
+    canvas export <id> --format md|html [--out path]
+    canvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]
 
   Tags / themes / config
-    plate tags [--json]                tag corpus across all plates
-    plate theme list
-    plate theme add <name> <path>
-    plate config get [key]
-    plate config set <key> <value>     keys: port | defaultTheme | maxVersions
-    plate where                        print storage directory
+    canvas tags [--json]                tag corpus across all canvases
+    canvas theme list
+    canvas theme add <name> <path>
+    canvas config get [key]
+    canvas config set <key> <value>     keys: port | defaultTheme | maxVersions
+    canvas where                        print storage directory
 
 Content flags (for new + update):
   --html "..."        --html-file <path>     --html-stdin
@@ -62,12 +62,12 @@ Content flags (for new + update):
   --tags a,b,c        --theme name           --source "tool:model"
 
 Examples (agent-friendly):
-  ID=$(plate new --title "Dashboard" --html-file out.html --description "Q2 numbers" \\
+  ID=$(canvas new --title "Dashboard" --html-file out.html --description "Q2 numbers" \\
                   --source "shell-agent:gpt-5" --json | jq -r .id)
-  plate update "$ID" --css-stdin <<< 'body { font: 14px system-ui; }'
-  plate screenshot "$ID" --out /tmp/dashboard.png --dpr 2
-  plate export "$ID" --format md > dashboard.md
-  plate get "$ID" --field html > current.html
+  canvas update "$ID" --css-stdin <<< 'body { font: 14px system-ui; }'
+  canvas screenshot "$ID" --out /tmp/dashboard.png --dpr 2
+  canvas export "$ID" --format md > dashboard.md
+  canvas get "$ID" --field html > current.html
 `;
 
 function parseFlags(argv: string[]): { positional: string[]; flags: Record<string, string | true> } {
@@ -147,8 +147,8 @@ async function main() {
       const cfg = await loadConfig();
       const port = typeof flags.port === "string" ? Number(flags.port) : cfg.port;
       const { url } = await startServer(port);
-      console.log(`plate viewer running at ${url}`);
-      console.log(`storage: ${plateHome()}`);
+      console.log(`supacanvas viewer running at ${url}`);
+      console.log(`storage: ${supacanvasHome()}`);
       if (!flags["no-open"]) await openInBrowser(url);
       await new Promise(() => {});
       break;
@@ -161,13 +161,13 @@ async function main() {
     }
 
     case "list": {
-      const items = await listPlates({
+      const items = await listCanvases({
         tag: typeof flags.tag === "string" ? flags.tag : undefined,
         search: typeof flags.search === "string" ? flags.search : undefined,
         limit: typeof flags.limit === "string" ? Number(flags.limit) : undefined,
       });
       if (flags.json) { console.log(JSON.stringify(items, null, 2)); break; }
-      if (items.length === 0) { console.log("(no plates yet)"); break; }
+      if (items.length === 0) { console.log("(no canvases yet)"); break; }
       for (const c of items) {
         const tags = c.tags.length ? `  [${c.tags.join(", ")}]` : "";
         console.log(`${c.id}\t${c.title}${tags}`);
@@ -177,9 +177,9 @@ async function main() {
 
     case "open": {
       const id = positional[0];
-      if (!id) { console.error("usage: plate open <id>"); process.exit(2); }
+      if (!id) { console.error("usage: canvas open <id>"); process.exit(2); }
       const cfg = await loadConfig();
-      const url = `http://localhost:${cfg.port}/p/${id}`;
+      const url = `http://localhost:${cfg.port}/c/${id}`;
       console.log(url);
       await openInBrowser(url);
       break;
@@ -187,24 +187,24 @@ async function main() {
 
     case "get": {
       const id = positional[0];
-      if (!id) { console.error("usage: plate get <id> [--field html|css|js|meta] [--json]"); process.exit(2); }
-      const plate = await getPlate(id);
-      if (!plate) { console.error(`plate not found: ${id}`); process.exit(1); }
+      if (!id) { console.error("usage: canvas get <id> [--field html|css|js|meta] [--json]"); process.exit(2); }
+      const canvas = await getCanvas(id);
+      if (!canvas) { console.error(`canvas not found: ${id}`); process.exit(1); }
       const field = typeof flags.field === "string" ? flags.field : null;
       if (field === "html" || field === "css" || field === "js") {
-        process.stdout.write(plate[field]);
+        process.stdout.write(canvas[field]);
         if (process.stdout.isTTY) process.stdout.write("\n");
         break;
       }
-      if (field === "meta") { console.log(JSON.stringify(plate.meta, null, 2)); break; }
-      if (flags.json) { console.log(JSON.stringify(plate, null, 2)); break; }
+      if (field === "meta") { console.log(JSON.stringify(canvas.meta, null, 2)); break; }
+      if (flags.json) { console.log(JSON.stringify(canvas, null, 2)); break; }
       // Human-friendly default
-      console.log(`# ${plate.meta.title}    [${plate.meta.id}]`);
-      if (plate.meta.description) console.log(plate.meta.description);
-      if (plate.meta.tags.length) console.log(`tags: ${plate.meta.tags.join(", ")}`);
-      if (plate.meta.source) console.log(`source: ${plate.meta.source}`);
-      console.log(`updated: ${plate.meta.updatedAt}`);
-      console.log(`html: ${plate.html.length} bytes  css: ${plate.css.length}  js: ${plate.js.length}`);
+      console.log(`# ${canvas.meta.title}    [${canvas.meta.id}]`);
+      if (canvas.meta.description) console.log(canvas.meta.description);
+      if (canvas.meta.tags.length) console.log(`tags: ${canvas.meta.tags.join(", ")}`);
+      if (canvas.meta.source) console.log(`source: ${canvas.meta.source}`);
+      console.log(`updated: ${canvas.meta.updatedAt}`);
+      console.log(`html: ${canvas.html.length} bytes  css: ${canvas.css.length}  js: ${canvas.js.length}`);
       console.log("(use --field html|css|js|meta to read content; --json for full record)");
       break;
     }
@@ -221,14 +221,14 @@ async function main() {
       const tags = typeof flags.tags === "string"
         ? flags.tags.split(",").map(t => t.trim()).filter(Boolean)
         : undefined;
-      const meta = await createPlate({ title, html, css, js, description, context, source, theme, tags });
+      const meta = await createCanvas({ title, html, css, js, description, context, source, theme, tags });
       emit(meta, flags);
       break;
     }
 
     case "update": {
       const id = positional[0];
-      if (!id) { console.error("usage: plate update <id> [flags]"); process.exit(2); }
+      if (!id) { console.error("usage: canvas update <id> [flags]"); process.exit(2); }
       const title = typeof flags.title === "string" ? flags.title : undefined;
       const html = await readContent(flags, "html");
       const css = await readContent(flags, "css");
@@ -240,7 +240,7 @@ async function main() {
       const tags = typeof flags.tags === "string"
         ? flags.tags.split(",").map(t => t.trim()).filter(Boolean)
         : undefined;
-      const result = await updatePlate(id, { title, html, css, js, description, context, source, theme, tags });
+      const result = await updateCanvas(id, { title, html, css, js, description, context, source, theme, tags });
       if (flags.json) { console.log(JSON.stringify(result, null, 2)); break; }
       console.log(`updated ${id} (snapshot ${result.version})`);
       break;
@@ -248,15 +248,15 @@ async function main() {
 
     case "rm": {
       const id = positional[0];
-      if (!id) { console.error("usage: plate rm <id>"); process.exit(2); }
-      await deletePlate(id);
+      if (!id) { console.error("usage: canvas rm <id>"); process.exit(2); }
+      await deleteCanvas(id);
       console.log(`moved to trash: ${id}`);
       break;
     }
 
     case "versions": {
       const id = positional[0];
-      if (!id) { console.error("usage: plate versions <id> [--json]"); process.exit(2); }
+      if (!id) { console.error("usage: canvas versions <id> [--json]"); process.exit(2); }
       const versions = await listVersions(id);
       if (flags.json) { console.log(JSON.stringify(versions, null, 2)); break; }
       if (versions.length === 0) { console.log("(no revisions on file)"); break; }
@@ -270,7 +270,7 @@ async function main() {
     case "restore": {
       const id = positional[0];
       const version = typeof flags.version === "string" ? flags.version : null;
-      if (!id || !version) { console.error("usage: plate restore <id> --version <timestamp>"); process.exit(2); }
+      if (!id || !version) { console.error("usage: canvas restore <id> --version <timestamp>"); process.exit(2); }
       const result = await restoreVersion(id, version);
       if (flags.json) { console.log(JSON.stringify(result, null, 2)); break; }
       console.log(`restored ${id} from ${result.restoredFrom}`);
@@ -281,12 +281,12 @@ async function main() {
       const id = positional[0];
       const format = typeof flags.format === "string" ? flags.format : null;
       if (!id || (format !== "md" && format !== "markdown" && format !== "html")) {
-        console.error("usage: plate export <id> --format md|html [--out path]");
+        console.error("usage: canvas export <id> --format md|html [--out path]");
         process.exit(2);
       }
-      const plate = await getPlate(id);
-      if (!plate) { console.error(`plate not found: ${id}`); process.exit(1); }
-      const content = (format === "html") ? await toStandaloneHtml(plate) : toMarkdown(plate);
+      const canvas = await getCanvas(id);
+      if (!canvas) { console.error(`canvas not found: ${id}`); process.exit(1); }
+      const content = (format === "html") ? await toStandaloneHtml(canvas) : toMarkdown(canvas);
       if (typeof flags.out === "string") {
         await writeFile(flags.out, content);
         console.error(`wrote ${flags.out}`);
@@ -299,10 +299,10 @@ async function main() {
 
     case "screenshot": {
       const id = positional[0];
-      if (!id) { console.error("usage: plate screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]"); process.exit(2); }
-      const plate = await getPlate(id);
-      if (!plate) { console.error(`plate not found: ${id}`); process.exit(1); }
-      const png = await screenshotPlate(plate, {
+      if (!id) { console.error("usage: canvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]"); process.exit(2); }
+      const canvas = await getCanvas(id);
+      if (!canvas) { console.error(`canvas not found: ${id}`); process.exit(1); }
+      const png = await screenshotCanvas(canvas, {
         width: typeof flags.w === "string" ? Number(flags.w) : undefined,
         height: typeof flags.h === "string" ? Number(flags.h) : undefined,
         deviceScaleFactor: typeof flags.dpr === "string" ? Number(flags.dpr) : undefined,
@@ -326,19 +326,19 @@ async function main() {
     }
 
     case "where": {
-      console.log(plateHome());
+      console.log(supacanvasHome());
       break;
     }
 
     case "setup": {
       const home = homedir();
-      const plateBin = process.argv[1] && process.argv[1].includes("/.bun/")
-        ? "plate"  // user has it on PATH via bun's global bin
-        : "plate";
+      const binName = process.argv[1] && process.argv[1].includes("/.bun/")
+        ? "canvas"  // user has it on PATH via bun's global bin
+        : "canvas";
 
       const snippet = {
         mcpServers: {
-          plate: { command: plateBin, args: ["mcp"] },
+          canvas: { command: binName, args: ["mcp"] },
         },
       };
 
@@ -360,7 +360,7 @@ async function main() {
           name: "Claude Code",
           path: join(home, ".claude/settings.json"),
           format: "json",
-          alt: "claude mcp add plate plate mcp",
+          alt: "claude mcp add canvas canvas mcp",
         },
         {
           name: "Continue",
@@ -373,7 +373,7 @@ async function main() {
       const writeMode = flags.write === true;
 
       console.log("");
-      console.log("Plate setup");
+      console.log("Canvas setup");
       console.log("───────────");
       console.log("");
       console.log("Add this to your AI client's MCP config:");
@@ -406,7 +406,7 @@ async function main() {
           }
           const merged = {
             ...existing,
-            mcpServers: { ...(existing.mcpServers ?? {}), plate: snippet.mcpServers.plate },
+            mcpServers: { ...(existing.mcpServers ?? {}), canvas: snippet.mcpServers.canvas },
           };
           await writeFile(c.path, JSON.stringify(merged, null, 2) + "\n");
           console.log(`  ✓ wrote ${c.path}`);
@@ -422,9 +422,9 @@ async function main() {
       }
 
       console.log("Then in another terminal:");
-      console.log("  plate serve");
+      console.log("  canvas serve");
       console.log("");
-      console.log("Ask your AI: \"create a plate with a working analog clock\"");
+      console.log("Ask your AI: \"create a canvas with a working analog clock\"");
       console.log("");
       break;
     }
@@ -435,12 +435,12 @@ async function main() {
         for (const t of await listThemes()) console.log(t);
       } else if (sub === "add") {
         const name = positional[1]; const path = positional[2];
-        if (!name || !path) { console.error("usage: plate theme add <name> <path>"); process.exit(2); }
+        if (!name || !path) { console.error("usage: canvas theme add <name> <path>"); process.exit(2); }
         const css = await readFile(path, "utf8");
         await addTheme(name, css);
         console.log(`installed theme: ${name}`);
       } else {
-        console.error("usage: plate theme list | plate theme add <name> <path>");
+        console.error("usage: canvas theme list | canvas theme add <name> <path>");
         process.exit(2);
       }
       break;
@@ -455,14 +455,14 @@ async function main() {
         console.log((cfg as unknown as Record<string, unknown>)[key]);
       } else if (sub === "set") {
         const key = positional[1]; const val = positional[2];
-        if (!key || val === undefined) { console.error("usage: plate config set <key> <value>"); process.exit(2); }
+        if (!key || val === undefined) { console.error("usage: canvas config set <key> <value>"); process.exit(2); }
         const next = { ...cfg } as unknown as Record<string, unknown>;
         if (key === "port" || key === "maxVersions") next[key] = Number(val);
         else next[key] = val;
         await saveConfig(next as unknown as typeof cfg);
         console.log(JSON.stringify(next, null, 2));
       } else {
-        console.error("usage: plate config get [key] | plate config set <key> <value>");
+        console.error("usage: canvas config get [key] | canvas config set <key> <value>");
         process.exit(2);
       }
       break;

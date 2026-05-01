@@ -1,83 +1,83 @@
 import { Hono } from "hono";
 import {
-  createPlate,
-  updatePlate,
-  getPlate,
-  listPlates,
-  deletePlate,
+  createCanvas,
+  updateCanvas,
+  getCanvas,
+  listCanvases,
+  deleteCanvas,
   listVersions,
   restoreVersion,
   listThemes,
   listAllTags,
   ensureLayout,
 } from "./storage.ts";
-import { renderPlateDoc, escapeHtml } from "./render.ts";
+import { renderCanvasDoc, escapeHtml } from "./render.ts";
 import { toMarkdown, toStandaloneHtml, toPrintHtml } from "./export.ts";
-import { screenshotPlate, ChromeNotFoundError } from "./screenshot.ts";
-import type { PlateMeta, SnapshotInfo } from "./types.ts";
+import { screenshotCanvas, ChromeNotFoundError } from "./screenshot.ts";
+import type { CanvasMeta, SnapshotInfo } from "./types.ts";
 
 export function buildApp() {
   const app = new Hono();
 
   app.get("/", async (c) => {
-    const plates = await listPlates();
+    const canvases = await listCanvases();
     const themes = await listThemes();
-    return c.html(galleryHtml(plates, themes));
+    return c.html(galleryHtml(canvases, themes));
   });
 
-  app.get("/p/:id", async (c) => {
-    const plate = await getPlate(c.req.param("id"));
-    if (!plate) return c.notFound();
+  app.get("/c/:id", async (c) => {
+    const canvas = await getCanvas(c.req.param("id"));
+    if (!canvas) return c.notFound();
     const themes = await listThemes();
-    const versions = await listVersions(plate.meta.id);
-    return c.html(viewerHtml(plate.meta, themes, versions));
+    const versions = await listVersions(canvas.meta.id);
+    return c.html(viewerHtml(canvas.meta, themes, versions));
   });
 
-  // The actual plate content, served into a sandboxed iframe.
-  app.get("/p/:id/raw", async (c) => {
-    const plate = await getPlate(c.req.param("id"));
-    if (!plate) return c.notFound();
-    const doc = await renderPlateDoc(plate);
+  // The actual canvas content, served into a sandboxed iframe.
+  app.get("/c/:id/raw", async (c) => {
+    const canvas = await getCanvas(c.req.param("id"));
+    if (!canvas) return c.notFound();
+    const doc = await renderCanvasDoc(canvas);
     c.header("Cache-Control", "no-store");
     return c.html(doc);
   });
 
   // ---- Exports ----
 
-  app.get("/p/:id/export.md", async (c) => {
-    const plate = await getPlate(c.req.param("id"));
-    if (!plate) return c.notFound();
+  app.get("/c/:id/export.md", async (c) => {
+    const canvas = await getCanvas(c.req.param("id"));
+    if (!canvas) return c.notFound();
     c.header("Content-Type", "text/markdown; charset=utf-8");
-    c.header("Content-Disposition", `attachment; filename="${safeFilename(plate.meta.title)}.md"`);
-    return c.body(toMarkdown(plate));
+    c.header("Content-Disposition", `attachment; filename="${safeFilename(canvas.meta.title)}.md"`);
+    return c.body(toMarkdown(canvas));
   });
 
-  app.get("/p/:id/export.html", async (c) => {
-    const plate = await getPlate(c.req.param("id"));
-    if (!plate) return c.notFound();
-    const html = await toStandaloneHtml(plate);
+  app.get("/c/:id/export.html", async (c) => {
+    const canvas = await getCanvas(c.req.param("id"));
+    if (!canvas) return c.notFound();
+    const html = await toStandaloneHtml(canvas);
     c.header("Content-Type", "text/html; charset=utf-8");
-    c.header("Content-Disposition", `attachment; filename="${safeFilename(plate.meta.title)}.html"`);
+    c.header("Content-Disposition", `attachment; filename="${safeFilename(canvas.meta.title)}.html"`);
     return c.body(html);
   });
 
   // Auto-print page — user gets the browser's native print sheet → Save as PDF.
-  app.get("/p/:id/print", async (c) => {
-    const plate = await getPlate(c.req.param("id"));
-    if (!plate) return c.notFound();
-    const html = await toPrintHtml(plate);
+  app.get("/c/:id/print", async (c) => {
+    const canvas = await getCanvas(c.req.param("id"));
+    if (!canvas) return c.notFound();
+    const html = await toPrintHtml(canvas);
     c.header("Cache-Control", "no-store");
     return c.html(html);
   });
 
-  app.get("/p/:id/screenshot.png", async (c) => {
-    const plate = await getPlate(c.req.param("id"));
-    if (!plate) return c.notFound();
+  app.get("/c/:id/screenshot.png", async (c) => {
+    const canvas = await getCanvas(c.req.param("id"));
+    if (!canvas) return c.notFound();
     const w = c.req.query("w");
     const h = c.req.query("h");
     const dpr = c.req.query("dpr");
     try {
-      const png = await screenshotPlate(plate, {
+      const png = await screenshotCanvas(canvas, {
         width: w ? Number(w) : undefined,
         height: h ? Number(h) : undefined,
         deviceScaleFactor: dpr ? Number(dpr) : undefined,
@@ -92,7 +92,7 @@ export function buildApp() {
         headers: {
           "Content-Type": "image/png",
           "Cache-Control": "no-store",
-          "Content-Disposition": `inline; filename="${safeFilename(plate.meta.title)}.png"`,
+          "Content-Disposition": `inline; filename="${safeFilename(canvas.meta.title)}.png"`,
         },
       });
     } catch (e) {
@@ -103,15 +103,15 @@ export function buildApp() {
 
   // ---- JSON API ----
 
-  app.get("/api/plates", async (c) => {
+  app.get("/api/canvases", async (c) => {
     const tag = c.req.query("tag") ?? undefined;
     const search = c.req.query("search") ?? undefined;
-    return c.json(await listPlates({ tag, search }));
+    return c.json(await listCanvases({ tag, search }));
   });
 
-  app.post("/api/plates", async (c) => {
+  app.post("/api/canvases", async (c) => {
     const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
-    const meta = await createPlate({
+    const meta = await createCanvas({
       title: String(body.title ?? "Untitled"),
       html: String(body.html ?? ""),
       css: typeof body.css === "string" ? body.css : "",
@@ -125,17 +125,17 @@ export function buildApp() {
     return c.json(meta, 201);
   });
 
-  app.get("/api/plates/:id", async (c) => {
-    const plate = await getPlate(c.req.param("id"));
-    if (!plate) return c.notFound();
-    return c.json(plate);
+  app.get("/api/canvases/:id", async (c) => {
+    const canvas = await getCanvas(c.req.param("id"));
+    if (!canvas) return c.notFound();
+    return c.json(canvas);
   });
 
-  app.patch("/api/plates/:id", async (c) => {
+  app.patch("/api/canvases/:id", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
     try {
-      const result = await updatePlate(id, {
+      const result = await updateCanvas(id, {
         title: typeof body.title === "string" ? body.title : undefined,
         html: typeof body.html === "string" ? body.html : undefined,
         css: typeof body.css === "string" ? body.css : undefined,
@@ -152,20 +152,20 @@ export function buildApp() {
     }
   });
 
-  app.delete("/api/plates/:id", async (c) => {
+  app.delete("/api/canvases/:id", async (c) => {
     try {
-      await deletePlate(c.req.param("id"));
+      await deleteCanvas(c.req.param("id"));
       return c.json({ ok: true });
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }
   });
 
-  app.get("/api/plates/:id/versions", async (c) => {
+  app.get("/api/canvases/:id/versions", async (c) => {
     return c.json(await listVersions(c.req.param("id")));
   });
 
-  app.post("/api/plates/:id/restore", async (c) => {
+  app.post("/api/canvases/:id/restore", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
     const version = String(body.version ?? "");
@@ -194,13 +194,13 @@ export async function startServer(port: number): Promise<{ url: string; stop: ()
 }
 
 function safeFilename(s: string): string {
-  return s.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "plate";
+  return s.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "canvas";
 }
 
 // ---------------------------------------------------------------------------
 // HTML templates — server-rendered, no client framework.
 //
-// Aesthetic: curatorial archive / specimen plates.
+// Aesthetic: curatorial archive / specimen canvases.
 //   - Cream paper with subtle grain
 //   - Display: Fraunces (italic), Body: General Sans, Mono: JetBrains Mono
 //   - Single oxidized-red accent, used sparingly
@@ -326,36 +326,36 @@ interface GallerySummary {
   updatedAt: string;
 }
 
-function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
+function galleryHtml(canvases: GallerySummary[], _themes: string[]): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", year: "numeric",
   }).toUpperCase();
 
-  const total = plates.length;
+  const total = canvases.length;
   const totalPad = String(total).padStart(2, "0");
 
-  const cards = plates.map((c, i) => {
-    const plate = String(i + 1).padStart(2, "0");
+  const cards = canvases.map((c, i) => {
+    const canvas = String(i + 1).padStart(2, "0");
     return `
-    <a class="plate" href="/p/${encodeURIComponent(c.id)}" style="--i:${i}">
-      <header class="plate-head">
-        <span class="plate-no">PLATE Nº ${plate} / ${totalPad}</span>
-        <span class="plate-date">${formatRelative(c.updatedAt)}</span>
+    <a class="canvas" href="/c/${encodeURIComponent(c.id)}" style="--i:${i}">
+      <header class="canvas-head">
+        <span class="canvas-no">CANVAS Nº ${canvas} / ${totalPad}</span>
+        <span class="canvas-date">${formatRelative(c.updatedAt)}</span>
       </header>
-      ${c.source ? `<div class="plate-source" title="Authored by ${escapeHtml(c.source)}">via ${escapeHtml(c.source)}</div>` : ``}
-      <div class="plate-frame">
-        <iframe src="/p/${encodeURIComponent(c.id)}/raw" sandbox="allow-scripts" loading="lazy" tabindex="-1"></iframe>
-        <div class="plate-frame-mask"></div>
+      ${c.source ? `<div class="canvas-source" title="Authored by ${escapeHtml(c.source)}">via ${escapeHtml(c.source)}</div>` : ``}
+      <div class="canvas-frame">
+        <iframe src="/c/${encodeURIComponent(c.id)}/raw" sandbox="allow-scripts" loading="lazy" tabindex="-1"></iframe>
+        <div class="canvas-frame-mask"></div>
       </div>
-      <div class="plate-caption">
-        <div class="plate-title">${escapeHtml(c.title)}</div>
+      <div class="canvas-caption">
+        <div class="canvas-title">${escapeHtml(c.title)}</div>
         ${c.description
-          ? `<div class="plate-blurb">${escapeHtml(c.description)}</div>`
+          ? `<div class="canvas-blurb">${escapeHtml(c.description)}</div>`
           : ``}
         ${c.tags.length
-          ? `<div class="plate-subjects">${c.tags.map(t => escapeHtml(t)).join(" · ")}</div>`
-          : `<div class="plate-subjects muted">Unclassified</div>`}
-        <div class="plate-catalog">№ ${escapeHtml(c.id)}</div>
+          ? `<div class="canvas-subjects">${c.tags.map(t => escapeHtml(t)).join(" · ")}</div>`
+          : `<div class="canvas-subjects muted">Unclassified</div>`}
+        <div class="canvas-catalog">№ ${escapeHtml(c.id)}</div>
       </div>
     </a>`;
   }).join("");
@@ -367,7 +367,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
       <p>Connect this archive to an AI client over MCP, then ask it to make something.</p>
       <pre class="recipe"><code>{
   "mcpServers": {
-    "plate": { "command": "plate", "args": ["mcp"] }
+    "canvas": { "command": "canvas", "args": ["mcp"] }
   }
 }</code></pre>
     </div>` : "";
@@ -375,7 +375,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
   const body = `
 <header class="masthead">
   <div class="masthead-row">
-    <span class="eyebrow">PL ⁄ Plate ⁄ Vol. I</span>
+    <span class="eyebrow">SC ⁄ Supacanvas ⁄ Vol. I</span>
     <span class="eyebrow">${today}</span>
   </div>
   <h1 class="masthead-title">
@@ -443,7 +443,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     margin-top: 28px;
   }
 
-  .plate {
+  .canvas {
     display: block;
     color: var(--ink);
     border-bottom: 0;
@@ -451,8 +451,8 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     animation: rise 0.6s var(--easing) backwards;
     animation-delay: calc(var(--i, 0) * 35ms);
   }
-  .plate:hover { transform: translateY(-3px); border-bottom: 0; }
-  .plate-head {
+  .canvas:hover { transform: translateY(-3px); border-bottom: 0; }
+  .canvas-head {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -465,7 +465,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     padding-bottom: 9px;
     border-bottom: 1px solid var(--rule);
   }
-  .plate-frame {
+  .canvas-frame {
     position: relative;
     aspect-ratio: 4 / 3;
     background: var(--card);
@@ -474,24 +474,24 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     overflow: hidden;
     transition: border-color 220ms var(--easing);
   }
-  .plate:hover .plate-frame { border-color: var(--ink); }
-  .plate-frame iframe {
+  .canvas:hover .canvas-frame { border-color: var(--ink); }
+  .canvas-frame iframe {
     width: 200%; height: 200%; border: 0;
     transform: scale(0.5); transform-origin: 0 0;
     pointer-events: none;
     background: white;
   }
-  .plate-frame-mask {
+  .canvas-frame-mask {
     position: absolute; inset: 0;
     background: linear-gradient(180deg, transparent 70%, rgba(243, 237, 223, 0.2) 100%);
     pointer-events: none;
   }
-  .plate-caption {
+  .canvas-caption {
     padding-top: 14px;
     display: grid;
     gap: 6px;
   }
-  .plate-title {
+  .canvas-title {
     font-family: var(--serif);
     font-style: italic;
     font-weight: 400;
@@ -500,7 +500,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     letter-spacing: -0.01em;
     color: var(--ink);
   }
-  .plate-blurb {
+  .canvas-blurb {
     font-size: 14px;
     color: var(--ink-2);
     line-height: 1.5;
@@ -510,7 +510,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .plate-subjects {
+  .canvas-subjects {
     font-family: var(--mono);
     font-size: 12px;
     letter-spacing: 0.10em;
@@ -518,14 +518,14 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     color: var(--ink-2);
     font-weight: 500;
   }
-  .plate-catalog {
+  .canvas-catalog {
     font-family: var(--mono);
     font-size: 12px;
     color: var(--ink-2);
     letter-spacing: 0.04em;
     margin-top: 2px;
   }
-  .plate-source {
+  .canvas-source {
     font-family: var(--mono);
     font-size: 11px;
     color: var(--muted);
@@ -578,7 +578,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
   const grid = document.getElementById('grid');
   search?.addEventListener('input', () => {
     const q = search.value.toLowerCase().trim();
-    for (const card of grid.querySelectorAll('.plate')) {
+    for (const card of grid.querySelectorAll('.canvas')) {
       const text = card.textContent.toLowerCase();
       card.style.display = !q || text.includes(q) ? '' : 'none';
     }
@@ -586,7 +586,7 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
   document.getElementById('new')?.addEventListener('click', async () => {
     const title = prompt('Title?', 'Untitled');
     if (title === null) return;
-    const res = await fetch('/api/plates', {
+    const res = await fetch('/api/canvases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -599,10 +599,10 @@ function galleryHtml(plates: GallerySummary[], _themes: string[]): string {
     if (res.ok) { const m = await res.json(); location.href = '/c/' + m.id; }
   });
 </script>`;
-  return pageShell("The Archive — Plate", body);
+  return pageShell("The Archive — Supacanvas", body);
 }
 
-function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[]): string {
+function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]): string {
   const themeOptions = themes.map(t =>
     `<option value="${escapeHtml(t)}"${t === meta.theme ? " selected" : ""}>${escapeHtml(t)}</option>`
   ).join("");
@@ -622,7 +622,7 @@ function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[])
 <header class="vbar">
   <a href="/" class="back">‹‹ Archive</a>
   <div class="vbar-center">
-    <div class="eyebrow">PLATE — № ${escapeHtml(meta.id)}</div>
+    <div class="eyebrow">CANVAS — № ${escapeHtml(meta.id)}</div>
     <h1 id="title-display" class="serif italic">${escapeHtml(meta.title)}</h1>
   </div>
   <div class="vbar-right">
@@ -638,13 +638,13 @@ function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[])
     <div class="frame-corner bl"></div>
     <div class="frame-corner br"></div>
     <button class="fs-btn" id="fs-btn" type="button" title="Fullscreen — F · Esc to exit"><span class="fs-icon"></span></button>
-    <iframe id="frame" src="/p/${encodeURIComponent(meta.id)}/raw" sandbox="allow-scripts" allowfullscreen allow="fullscreen"></iframe>
+    <iframe id="frame" src="/c/${encodeURIComponent(meta.id)}/raw" sandbox="allow-scripts" allowfullscreen allow="fullscreen"></iframe>
   </section>
 
   <aside class="drawer">
     <section class="dsec">
       <div class="eyebrow">Description</div>
-      <textarea id="description" rows="2" placeholder="One or two sentences. What is this plate?">${escapeHtml(meta.description)}</textarea>
+      <textarea id="description" rows="2" placeholder="One or two sentences. What is this canvas?">${escapeHtml(meta.description)}</textarea>
     </section>
 
     <section class="dsec">
@@ -656,7 +656,7 @@ function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[])
     </section>
 
     <section class="dsec">
-      <div class="eyebrow">Plate</div>
+      <div class="eyebrow">Canvas</div>
       <select id="theme">${themeOptions}</select>
     </section>
 
@@ -680,10 +680,10 @@ function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[])
     <section class="dsec">
       <div class="eyebrow">Export</div>
       <div class="export-row">
-        <a href="/p/${encodeURIComponent(meta.id)}/export.md" class="export-link" download>Markdown</a>
-        <a href="/p/${encodeURIComponent(meta.id)}/export.html" class="export-link" download>Standalone HTML</a>
-        <a href="/p/${encodeURIComponent(meta.id)}/screenshot.png" class="export-link" target="_blank" rel="noopener">PNG (Screenshot)</a>
-        <a href="/p/${encodeURIComponent(meta.id)}/print" class="export-link" target="_blank" rel="noopener">PDF (Print sheet)</a>
+        <a href="/c/${encodeURIComponent(meta.id)}/export.md" class="export-link" download>Markdown</a>
+        <a href="/c/${encodeURIComponent(meta.id)}/export.html" class="export-link" download>Standalone HTML</a>
+        <a href="/c/${encodeURIComponent(meta.id)}/screenshot.png" class="export-link" target="_blank" rel="noopener">PNG (Screenshot)</a>
+        <a href="/c/${encodeURIComponent(meta.id)}/print" class="export-link" target="_blank" rel="noopener">PDF (Print sheet)</a>
       </div>
       <div class="export-note">PDF opens the browser's print dialog — choose “Save as PDF.” PNG renders via headless Chrome (must be installed locally).</div>
     </section>
@@ -996,7 +996,7 @@ function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[])
   const reload = () => { frame.src = frame.src; };
 
   async function patch(body) {
-    const res = await fetch('/api/plates/' + encodeURIComponent(id), {
+    const res = await fetch('/api/canvases/' + encodeURIComponent(id), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -1144,14 +1144,14 @@ function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[])
 
   document.getElementById('delete').addEventListener('click', async () => {
     if (!confirm('Move this specimen to the trash?')) return;
-    const res = await fetch('/api/plates/' + encodeURIComponent(id), { method: 'DELETE' });
+    const res = await fetch('/api/canvases/' + encodeURIComponent(id), { method: 'DELETE' });
     if (res.ok) location.href = '/';
   });
 
   document.querySelectorAll('[data-restore]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const version = btn.getAttribute('data-restore');
-      const res = await fetch('/api/plates/' + encodeURIComponent(id) + '/restore', {
+      const res = await fetch('/api/canvases/' + encodeURIComponent(id) + '/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ version }),

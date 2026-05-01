@@ -1,17 +1,17 @@
 {
-  "name": "plate-mcp",
-  "version": "0.3.0",
-  "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS plates. AI-agnostic, files on disk, themable, versioned, exportable.",
+  "name": "supacanvas",
+  "version": "0.4.0",
+  "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. AI-agnostic, files on disk, themable, versioned, screenshottable, exportable.",
   "type": "module",
   "license": "MIT",
-  "author": "bhaulik@gmail.com",
+  "author": "yabemando@gmail.com",
   "keywords": [
+    "supacanvas",
     "mcp",
     "model-context-protocol",
     "claude",
     "anthropic",
     "ai",
-    "plate",
     "canvas",
     "artifact",
     "llm",
@@ -20,16 +20,17 @@
     "cursor",
     "claude-desktop"
   ],
-  "homepage": "https://github.com/bhaulik/plate",
+  "homepage": "https://github.com/bhaulik/supacanvas",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bhaulik/plate.git"
+    "url": "https://github.com/bhaulik/supacanvas.git"
   },
   "bugs": {
-    "url": "https://github.com/bhaulik/plate/issues"
+    "url": "https://github.com/bhaulik/supacanvas/issues"
   },
   "bin": {
-    "plate": "./bin/plate"
+    "supacanvas": "./bin/supacanvas",
+    "supa": "./bin/supa"
   },
   "files": [
     "src/",

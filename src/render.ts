@@ -1,4 +1,4 @@
-import type { Plate } from "./types.ts";
+import type { Canvas } from "./types.ts";
 import { getThemeCSS } from "./storage.ts";
 
 function escapeForScript(s: string): string {
@@ -7,31 +7,31 @@ function escapeForScript(s: string): string {
 
 /**
  * Build the full HTML document that runs inside the sandboxed iframe.
- * Theme CSS is prepended so plate CSS can override it.
+ * Theme CSS is prepended so canvas CSS can override it.
  *
  * Note on safety: the iframe is rendered with sandbox="allow-scripts" but NOT
  * allow-same-origin. That keeps untrusted JS from touching cookies, localStorage,
- * or the parent page. We still inline the plate's own JS in a <script> tag.
+ * or the parent page. We still inline the canvas's own JS in a <script> tag.
  */
-export async function renderPlateDoc(plate: Plate): Promise<string> {
-  const themeCss = await getThemeCSS(plate.meta.theme);
+export async function renderCanvasDoc(canvas: Canvas): Promise<string> {
+  const themeCss = await getThemeCSS(canvas.meta.theme);
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${escapeHtml(plate.meta.title)}</title>
-<style data-plate-theme="${escapeHtml(plate.meta.theme)}">
+<title>${escapeHtml(canvas.meta.title)}</title>
+<style data-canvas-theme="${escapeHtml(canvas.meta.theme)}">
 ${themeCss}
 </style>
-<style data-plate-style>
-${plate.css}
+<style data-canvas-style>
+${canvas.css}
 </style>
 </head>
 <body>
-${plate.html}
+${canvas.html}
 <script>
-${escapeForScript(plate.js)}
+${escapeForScript(canvas.js)}
 </script>
 </body>
 </html>`;

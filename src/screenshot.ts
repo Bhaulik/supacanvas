@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
-import type { Plate } from "./types.ts";
-import { renderPlateDoc } from "./render.ts";
+import type { Canvas } from "./types.ts";
+import { renderCanvasDoc } from "./render.ts";
 
 /**
  * Auto-detect a Chrome/Chromium executable. We don't bundle a browser —
  * keeps the package small and avoids ~300MB of binaries the user almost
- * always has anyway. Override with PLATE_CHROME_PATH if needed.
+ * always has anyway. Override with SUPACANVAS_CHROME_PATH if needed.
  */
 const CHROME_CANDIDATES = [
   // macOS
@@ -27,7 +27,7 @@ const CHROME_CANDIDATES = [
 ];
 
 export function findChromePath(): string | null {
-  if (process.env.PLATE_CHROME_PATH) return process.env.PLATE_CHROME_PATH;
+  if (process.env.SUPACANVAS_CHROME_PATH) return process.env.SUPACANVAS_CHROME_PATH;
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   for (const p of CHROME_CANDIDATES) {
     try { if (existsSync(p)) return p; } catch { /* permission errors etc. */ }
@@ -49,18 +49,18 @@ export class ChromeNotFoundError extends Error {
   constructor() {
     super(
       "No Chrome/Chromium installation found. Install Chrome from " +
-      "https://www.google.com/chrome/ or set PLATE_CHROME_PATH to an " +
+      "https://www.google.com/chrome/ or set SUPACANVAS_CHROME_PATH to an " +
       "executable (Chromium / Brave / Edge / Arc all work)."
     );
     this.name = "ChromeNotFoundError";
   }
 }
 
-export async function screenshotPlate(plate: Plate, opts: ScreenshotOptions = {}): Promise<Buffer> {
+export async function screenshotCanvas(canvas: Canvas, opts: ScreenshotOptions = {}): Promise<Buffer> {
   const chromePath = findChromePath();
   if (!chromePath) throw new ChromeNotFoundError();
 
-  // Lazy import — keeps `plate mcp` startup fast even if screenshot is never used.
+  // Lazy import — keeps `canvas mcp` startup fast even if screenshot is never used.
   const puppeteer = (await import("puppeteer-core")).default;
 
   const browser = await puppeteer.launch({
@@ -82,7 +82,7 @@ export async function screenshotPlate(plate: Plate, opts: ScreenshotOptions = {}
       deviceScaleFactor: opts.deviceScaleFactor ?? 2,
     });
 
-    const html = await renderPlateDoc(plate);
+    const html = await renderCanvasDoc(canvas);
     // setContent writes the HTML directly — no server, no file, no origin issues.
     // networkidle0 = wait until 0 network connections for 500ms.
     await page.setContent(html, { waitUntil: "networkidle0", timeout: 10_000 });

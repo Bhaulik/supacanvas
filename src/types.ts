@@ -1,15 +1,15 @@
-export interface PlateMeta {
+export interface CanvasMeta {
   id: string;
   title: string;
   /**
-   * One- or two-sentence plain-language summary of what this plate is.
-   * Surfaced in the gallery and to AI agents listing plates — write it as
-   * if briefing someone who's never seen this plate before.
+   * One- or two-sentence plain-language summary of what this canvas is.
+   * Surfaced in the gallery and to AI agents listing canvases — write it as
+   * if briefing someone who's never seen this canvas before.
    */
   description: string;
   /**
    * Longer plain-language context for any future reader (human or agent).
-   * What data does this plate represent? Where did it come from?
+   * What data does this canvas represent? Where did it come from?
    * What should the next agent know before editing it?
    */
   context: string;
@@ -17,23 +17,23 @@ export interface PlateMeta {
   theme: string;
   /**
    * Free-form provenance string identifying the AI tool/model that last wrote
-   * to this plate. Recommended format: "tool:model" (e.g. "cursor:claude-opus-4",
+   * to this canvas. Recommended format: "tool:model" (e.g. "cursor:claude-opus-4",
    * "claude-desktop:claude-sonnet-4-6", "claude-code:claude-opus-4-7"). May be
-   * empty for plates authored manually or by tools that don't identify themselves.
+   * empty for canvases authored manually or by tools that don't identify themselves.
    */
   source: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Plate {
-  meta: PlateMeta;
+export interface Canvas {
+  meta: CanvasMeta;
   html: string;
   css: string;
   js: string;
 }
 
-export interface PlateSummary {
+export interface CanvasSummary {
   id: string;
   title: string;
   description: string;

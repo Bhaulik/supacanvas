@@ -1,26 +1,26 @@
-# Plate
+# Supacanvas
 
-> A local-first MCP server + browser viewer for AI-generated HTML/CSS/JS plates. **Yours on disk. Plug into any AI tool. Export anywhere.**
+> A local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. **Yours on disk. Plug into any AI tool. Export anywhere.**
 
 Think Claude Artifacts, but:
 
 - **AI-agnostic** — speaks the [Model Context Protocol](https://modelcontextprotocol.io) over stdio, so any MCP client (Claude Desktop, Claude Code, Cursor, ChatGPT desktop, Continue, etc.) can drive it.
-- **Files on disk** — every plate is a folder under `~/.plate/` containing `index.html`, `style.css`, `script.js`, `meta.json`. Open them in any editor, back them up, copy them around.
-- **Themable, no limits** — drop a CSS file into `~/.plate/themes/` and any plate can opt into it.
+- **Files on disk** — every canvas is a folder under `~/.supacanvas/` containing `index.html`, `style.css`, `script.js`, `meta.json`. Open them in any editor, back them up, copy them around.
+- **Themable, no limits** — drop a CSS file into `~/.supacanvas/themes/` and any canvas can opt into it.
 - **Versioned** — every AI edit auto-snapshots the previous state. Restore from the viewer drawer or the CLI.
-- **Exportable** — single-click Markdown, standalone HTML (theme inlined), or PDF (via the browser's print dialog).
-- **Searchable by intent** — each plate carries a plain-language `description` and an agent-oriented `context` field. Future AIs reading the plate pick up where you left off.
-- **Provenance-aware** — each plate (and each revision snapshot) records `source` so you can see which AI tool/model authored or last edited it.
+- **Exportable** — single-click Markdown, standalone HTML (theme inlined), PNG screenshot, or PDF (via the browser's print dialog).
+- **Searchable by intent** — each canvas carries a plain-language `description` and an agent-oriented `context` field. Future AIs reading the canvas pick up where you left off.
+- **Provenance-aware** — each canvas (and each revision snapshot) records `source` so you can see which AI tool/model authored or last edited it.
 - **Sandboxed** — AI-generated JS runs inside `<iframe sandbox="allow-scripts">` (no same-origin, no parent access).
 
 ---
 
 ## Install
 
-**One-liner** (installs Bun if missing, then plate globally):
+**One-liner** (installs Bun if missing, then supacanvas globally):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/bhaulik/plate/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bhaulik/supacanvas/main/install.sh | bash
 ```
 
 **Manual**:
@@ -29,37 +29,31 @@ curl -fsSL https://raw.githubusercontent.com/bhaulik/plate/main/install.sh | bas
 # 1. Bun (https://bun.sh) — required runtime
 curl -fsSL https://bun.sh/install | bash
 
-# 2. Plate
-bun install -g github:bhaulik/plate
+# 2. Supacanvas
+bun install -g github:bhaulik/supacanvas
 ```
 
 **From source** (for hacking on it):
 
 ```sh
-git clone https://github.com/bhaulik/plate.git
-cd plate && bun install && bun link
+git clone https://github.com/bhaulik/supacanvas.git
+cd supacanvas && bun install && bun link
 ```
 
-Storage lives at `~/.plate/` by default. Override with `PLATE_HOME=/some/other/path`.
+Storage lives at `~/.supacanvas/` by default. Override with `SUPACANVAS_HOME=/some/other/path`.
+
+> **Carrying data from earlier names?** `~/.plate/` and `~/.canvas/` are auto-detected as fallbacks if `~/.supacanvas/` doesn't exist yet, and a legacy `plates/` subdir is renamed to `canvases/` on first run. `PLATE_HOME` and `CANVAS_HOME` env vars still resolve correctly.
 
 ## Quick start
 
 ```sh
-plate setup     # prints MCP config + detects which AI clients you have
-plate serve     # starts the viewer at http://localhost:7777
+supacanvas setup     # prints MCP config + detects which AI clients you have
+supacanvas serve     # starts the viewer at http://localhost:7777
 ```
 
-`plate setup --write` will merge the MCP config into every detected JSON-based client config (Claude Desktop, Cursor, Claude Code) so you don't have to copy-paste.
+`supacanvas setup --write` will merge the MCP config into every detected JSON-based client config (Claude Desktop, Cursor, Claude Code) so you don't have to copy-paste.
 
-> Migrating from the pre-rename `canvas` version? Existing data at `~/.canvas/canvases/` is auto-detected and the inner directory is renamed to `~/.canvas/plates/` on first run. Setting `CANVAS_HOME` is also still honored as a fallback.
-
-## Run the viewer
-
-```sh
-plate serve          # opens http://localhost:7777 in your browser
-```
-
-The viewer is the gallery of plates your AI has created. It's separate from the MCP server — you can run them independently or together.
+There's also a short alias — `supa` — wherever you'd type `supacanvas`.
 
 ## Wire it into an AI client
 
@@ -67,27 +61,27 @@ The MCP server speaks JSON-RPC over stdio. Add it to whatever client you use:
 
 ### Claude Desktop
 
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or the equivalent on Windows/Linux:
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
 
 ```json
 {
   "mcpServers": {
-    "plate": {
-      "command": "plate",
+    "supacanvas": {
+      "command": "supacanvas",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-If `plate` isn't on PATH (Claude Desktop doesn't always inherit your shell's PATH), use absolute paths:
+If `supacanvas` isn't on PATH (Claude Desktop doesn't always inherit your shell's PATH), use absolute paths:
 
 ```json
 {
   "mcpServers": {
-    "plate": {
+    "supacanvas": {
       "command": "/Users/you/.bun/bin/bun",
-      "args": ["run", "/absolute/path/to/plate/src/cli.ts", "mcp"]
+      "args": ["run", "/absolute/path/to/supacanvas/src/cli.ts", "mcp"]
     }
   }
 }
@@ -100,40 +94,31 @@ Save as `~/.cursor/mcp.json` (global) or `<project>/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "plate": {
-      "command": "plate",
+    "supacanvas": {
+      "command": "supacanvas",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-In Cursor: `Cmd+Shift+J` → **MCP** → toggle `plate` on.
+In Cursor: `Cmd+Shift+J` → **MCP** → toggle `supacanvas` on.
 
 ### Claude Code
 
 ```sh
-claude mcp add plate plate mcp
-```
-
-Or add to `~/.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "plate": { "command": "plate", "args": ["mcp"] }
-  }
-}
+claude mcp add supacanvas supacanvas mcp
 ```
 
 ### Then
 
-Run `plate serve` in a terminal so the URLs the AI hands you actually render. Ask the AI things like:
+Run `supacanvas serve` in a terminal so URLs the AI hands you render. Ask:
 
-- *"Make me a plate with a working analog clock."*
-- *"Update the clock plate to use the `midnight` theme."*
-- *"List my plates tagged `prototype`."*
-- *"Show me the description of every plate about the auth flow."*
+- *"Make me a canvas with a working analog clock."*
+- *"Update the clock canvas to use the `midnight` theme."*
+- *"Take a screenshot of canvas `fair-lily-tm8` and show me."*
+- *"List my canvases tagged `prototype`."*
+- *"Show me the description of every canvas about the auth flow."*
 
 ---
 
@@ -141,69 +126,99 @@ Run `plate serve` in a terminal so the URLs the AI hands you actually render. As
 
 | Tool | Purpose |
 |---|---|
-| `plate_create` | Create a new plate (`title`, `html`, `css?`, `js?`, `tags?`, `theme?`, `description?`, `context?`, `source?`) |
-| `plate_update` | Update any subset of fields. Auto-snapshots before write. |
-| `plate_get` | Read full contents (html, css, js, meta) |
-| `plate_list` | List plates (filter by tag, full-text search across title/description/context/tags/source) |
-| `plate_delete` | Soft-delete (moves to `trash/`, recoverable) |
-| `plate_versions` | List saved snapshots (each carries the source captured at write time) |
-| `plate_restore` | Restore a previous snapshot |
-| `plate_export` | Serialize as `markdown` or standalone `html` |
+| `canvas_create` | Create a new canvas (`title`, `html`, `css?`, `js?`, `tags?`, `theme?`, `description?`, `context?`, `source?`) |
+| `canvas_update` | Update any subset of fields. Auto-snapshots before write. |
+| `canvas_get` | Read full contents (html, css, js, meta) |
+| `canvas_list` | List canvases (filter by tag, full-text search across title/description/context/tags/source) |
+| `canvas_delete` | Soft-delete (moves to `trash/`, recoverable) |
+| `canvas_versions` | List saved snapshots (each carries the source captured at write time) |
+| `canvas_restore` | Restore a previous snapshot |
+| `canvas_export` | Serialize as `markdown` or standalone `html` |
+| `canvas_screenshot` | Render to PNG and return it as inline image content (so the AI client renders it in chat) |
 | `theme_list` | List installed CSS themes |
-| `plate_open_url` | Get the localhost URL for a plate |
+| `canvas_open_url` | Get the localhost URL for a canvas |
 
-The tool schemas tell the AI to write good `description` (1–2 sentence summary), `context` (longer agent-oriented background), and `source` (e.g. `cursor:claude-opus-4`) on every write — so the next agent reading a plate understands it without re-deriving anything, and you can trace authorship over time.
+The tool schemas tell the AI to write good `description` (1–2 sentence summary), `context` (longer agent-oriented background), and `source` (e.g. `cursor:claude-opus-4`) on every write — so the next agent reading a canvas understands it without re-deriving anything, and you can trace authorship over time.
 
-## CLI
+## CLI (mirrors the MCP toolset for non-MCP agents)
 
 ```
-plate serve [--port N] [--no-open]
-plate mcp
-plate list [--tag T] [--search Q]
-plate open <id>
-plate new --title "..."
-plate rm <id>
-plate where
-plate theme list
-plate theme add <name> <path>
-plate config get [key]
-plate config set <key> <value>
+supacanvas serve [--port N] [--no-open]
+supacanvas mcp
+supacanvas setup [--write]
+
+supacanvas new --title "..." [content flags] [--json]
+supacanvas get <id> [--field html|css|js|meta] [--json]
+supacanvas update <id> [content flags] [--json]
+supacanvas list [--tag T] [--search Q] [--limit N] [--json]
+supacanvas rm <id>
+supacanvas open <id>
+
+supacanvas versions <id> [--json]
+supacanvas restore <id> --version <ts>
+supacanvas export <id> --format md|html [--out path]
+supacanvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]
+
+supacanvas tags [--json]
+supacanvas theme list
+supacanvas theme add <name> <path>
+supacanvas config get [key]
+supacanvas config set <key> <value>
+supacanvas where
+```
+
+Content flags accept inline (`--html "..."`), file (`--html-file path`), or stdin (`--html-stdin`) variants for `html`, `css`, `js`, and `context`. With `--json`, structured commands print full JSON; without it, just the id (so `ID=$(supacanvas new ...)` works in shell pipelines).
+
+Agent-friendly example:
+
+```sh
+ID=$(echo "<h1>Hello</h1>" | supacanvas new \
+       --title "Demo" \
+       --html-stdin \
+       --description "A throwaway demo." \
+       --tags "demo,test" \
+       --source "shell-agent:gpt-5" \
+       --json | jq -r .id)
+
+supacanvas screenshot "$ID" --out /tmp/demo.png --dpr 2
+supacanvas export "$ID" --format md > demo.md
 ```
 
 ## Browser viewer
 
-Run `plate serve` and open `http://localhost:7777`.
+Run `supacanvas serve` and open `http://localhost:7777`.
 
-- **Gallery** — every plate as a numbered specimen plate. Live thumbnail, italic-serif title, plain-language description, tag chips, catalog №, source badge.
+- **Gallery** — every canvas as a numbered specimen plate. Live thumbnail, italic-serif title, plain-language description, tag chips, catalog №, source badge.
 - **Viewer** — full-screen iframe with a sidebar drawer for editing description, context, theme, subjects (tag chips with autocomplete from your global tag corpus), revisions (one-click restore, source per version), and source.
 - **Fullscreen** — click the `⤢` button in the iframe corner, or press `F`. `Esc` exits.
-- **Export** — Markdown / standalone HTML / PDF (print sheet) directly from the drawer.
+- **Export** — Markdown / standalone HTML / PNG / PDF (print sheet) directly from the drawer.
 
 ## HTTP / JSON API
 
 Anything an MCP client can do, you can do via HTTP. Useful for scripting:
 
 ```
-GET    /api/plates                    list
-POST   /api/plates                    create
-GET    /api/plates/:id                get
-PATCH  /api/plates/:id                update (partial)
-DELETE /api/plates/:id                soft-delete
-GET    /api/plates/:id/versions       list snapshots (with source per version)
-POST   /api/plates/:id/restore        { version } → restore
-GET    /api/themes                    list themes
-GET    /api/tags                      [{name, count}] aggregated across all plates
-GET    /p/:id/export.md               markdown download
-GET    /p/:id/export.html             standalone HTML download (theme inlined)
-GET    /p/:id/print                   auto-print page → "Save as PDF" in the browser
+GET    /api/canvases                    list
+POST   /api/canvases                    create
+GET    /api/canvases/:id                get
+PATCH  /api/canvases/:id                update (partial)
+DELETE /api/canvases/:id                soft-delete
+GET    /api/canvases/:id/versions       list snapshots (with source per version)
+POST   /api/canvases/:id/restore        { version } → restore
+GET    /api/themes                      list themes
+GET    /api/tags                        [{name, count}] aggregated across all canvases
+GET    /c/:id/export.md                 markdown download
+GET    /c/:id/export.html               standalone HTML download (theme inlined)
+GET    /c/:id/screenshot.png            PNG via headless Chrome (?w / ?h / ?dpr / ?full)
+GET    /c/:id/print                     auto-print page → "Save as PDF" in the browser
 ```
 
 ## Storage layout
 
 ```
-~/.plate/
+~/.supacanvas/
   config.json                    # {port, defaultTheme, maxVersions}
-  plates/<id>/
+  canvases/<id>/
     index.html  style.css  script.js  meta.json
     .versions/<ISO-timestamp>/   # last 20 by default
   themes/*.css
@@ -217,7 +232,7 @@ GET    /p/:id/print                   auto-print page → "Save as PDF" in the b
   "id": "fair-lily-tm8",
   "title": "Step 3 Source Docs vs Exports",
   "description": "Visual explanation of why the Step 3 prompt fix helps the web UI but creates a DOCX/PDF export regression.",
-  "context": "Source: PR #4940 review thread. Numbers below come from convertProcessingChecklistToASingleHtml. Don't change the export path without checking that task.usedDocuments still renders.",
+  "context": "Source: PR #4940 review thread. Don't change the export path without checking that task.usedDocuments still renders.",
   "tags": ["processing-checklist", "step3", "code-review"],
   "theme": "default",
   "source": "cursor:claude-opus-4",
@@ -228,16 +243,22 @@ GET    /p/:id/print                   auto-print page → "Save as PDF" in the b
 
 ## Themes
 
-A theme is just a CSS file. Drop one into `~/.plate/themes/yours.css` and set it on any plate (via the viewer drawer, the CLI, or the `theme` field on `plate_create` / `plate_update`).
+A theme is just a CSS file. Drop one into `~/.supacanvas/themes/yours.css` and set it on any canvas (via the viewer drawer, the CLI, or the `theme` field on `canvas_create` / `canvas_update`).
 
-Themes target generic semantics — `body`, `h1`, `button`, `.card`, etc. — so AI-generated plates that use plain HTML inherit the theme automatically. The bundled `default.css` is a starting point.
+Themes target generic semantics — `body`, `h1`, `button`, `.card`, etc. — so AI-generated canvases that use plain HTML inherit the theme automatically. The bundled `default.css` is a starting point.
+
+## Screenshots
+
+`canvas_screenshot` (MCP), `supacanvas screenshot` (CLI), and `GET /c/:id/screenshot.png` (HTTP) all render the canvas to PNG via the user's installed Chrome / Chromium / Brave / Edge / Arc. **No bundled browser** — keeps the package small (~5 MB). Override the binary with `SUPACANVAS_CHROME_PATH=/path/to/chrome` if needed.
+
+The MCP variant returns the PNG as inline `image/png` content, so vision-capable AI clients (Cursor, Claude Desktop, etc.) display it directly in chat.
 
 ## Roadmap
 
-- **v0.3** — in-browser CodeMirror editor at `/p/:id/edit`, theme manager UI, trash recovery UI
-- **v0.4** — asset uploads (`<id>/assets/`), cross-plate linking
-- **v0.5** — `plate publish <id>` → static site folder ready for Netlify/GH Pages
-- **future** — hosted multi-user version
+- **v0.5** — in-browser CodeMirror editor at `/c/:id/edit`, theme manager UI, trash recovery UI
+- **v0.6** — asset uploads (`<id>/assets/`), cross-canvas linking
+- **v0.7** — `supacanvas publish <id>` → static site folder ready for Netlify/GH Pages
+- **future** — hosted Supacanvas Cloud (sync, sharing, team workspaces)
 
 ## License
 

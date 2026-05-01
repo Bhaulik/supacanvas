@@ -5,9 +5,9 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type AppConfig,
-  type Plate,
-  type PlateMeta,
-  type PlateSummary,
+  type Canvas,
+  type CanvasMeta,
+  type CanvasSummary,
   type SnapshotInfo,
   DEFAULT_CONFIG,
 } from "./types.ts";
@@ -16,14 +16,17 @@ import { generateId, isValidId } from "./ids.ts";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BUNDLED_THEMES_DIR = join(HERE, "themes");
 
-export function plateHome(): string {
-  if (process.env.PLATE_HOME) return resolve(process.env.PLATE_HOME);
-  if (process.env.CANVAS_HOME) return resolve(process.env.CANVAS_HOME);
-  const newHome = join(homedir(), ".plate");
-  const legacyHome = join(homedir(), ".canvas");
-  // Backward-compat: if the user has pre-rename data at ~/.canvas and no
-  // ~/.plate yet, keep using their existing dir so nothing disappears.
-  if (!existsSync(newHome) && existsSync(legacyHome)) return legacyHome;
+export function supacanvasHome(): string {
+  if (process.env.SUPACANVAS_HOME) return resolve(process.env.SUPACANVAS_HOME);
+  if (process.env.PLATE_HOME)      return resolve(process.env.PLATE_HOME);
+  if (process.env.CANVAS_HOME)     return resolve(process.env.CANVAS_HOME);
+  // Prefer ~/.supacanvas. Fall back to legacy locations only if they exist
+  // and the new one doesn't, so users carrying data from earlier names keep working.
+  const newHome      = join(homedir(), ".supacanvas");
+  const legacyPlate  = join(homedir(), ".plate");
+  const legacyCanvas = join(homedir(), ".canvas");
+  if (!existsSync(newHome) && existsSync(legacyPlate))  return legacyPlate;
+  if (!existsSync(newHome) && existsSync(legacyCanvas)) return legacyCanvas;
   return newHome;
 }
 
@@ -34,29 +37,30 @@ const FILES = {
   meta: "meta.json",
 } as const;
 
-function platesDir() { return join(plateHome(), "plates"); }
-function themesDir() { return join(plateHome(), "themes"); }
-function trashDir() { return join(plateHome(), "trash"); }
-function configPath() { return join(plateHome(), "config.json"); }
-function plateDir(id: string) { return join(platesDir(), id); }
-function versionsDir(id: string) { return join(plateDir(id), ".versions"); }
+function canvasesDir() { return join(supacanvasHome(), "canvases"); }
+function themesDir() { return join(supacanvasHome(), "themes"); }
+function trashDir() { return join(supacanvasHome(), "trash"); }
+function configPath() { return join(supacanvasHome(), "config.json"); }
+function canvasDir(id: string) { return join(canvasesDir(), id); }
+function versionsDir(id: string) { return join(canvasDir(id), ".versions"); }
 
 export async function ensureLayout(): Promise<void> {
-  const home = plateHome();
+  const home = supacanvasHome();
   await mkdir(home, { recursive: true });
 
-  // One-time rename: pre-rename installs stored plates under ~/.<home>/canvases/.
-  // After the canvas → plate rename, the new path is .../plates/. If we find the
-  // old subdir and no new one, rename it in place — same volume, cheap, idempotent.
-  const oldInner = join(home, "canvases");
-  const newInner = join(home, "plates");
-  if (existsSync(oldInner) && !existsSync(newInner)) {
-    await rename(oldInner, newInner);
-    // Use stderr so the MCP stdio transport stays clean.
-    console.error(`[plate] migrated ${oldInner} → ${newInner}`);
+  // One-time rename of the inner subdir.
+  // Earlier versions stored items under ~/<home>/canvases/ (canvas era) or
+  // ~/<home>/plates/ (plate era). We're back to "canvases/" as the canonical
+  // name — if a legacy "plates/" subdir is the only one present, rename it
+  // in place. Same volume, cheap, idempotent.
+  const platesInner   = join(home, "plates");
+  const canvasesInner = join(home, "canvases");
+  if (existsSync(platesInner) && !existsSync(canvasesInner)) {
+    await rename(platesInner, canvasesInner);
+    console.error(`[supacanvas] migrated ${platesInner} → ${canvasesInner}`);
   }
 
-  await mkdir(platesDir(), { recursive: true });
+  await mkdir(canvasesDir(), { recursive: true });
   await mkdir(themesDir(), { recursive: true });
   await mkdir(trashDir(), { recursive: true });
 
@@ -89,11 +93,11 @@ export async function saveConfig(cfg: AppConfig): Promise<void> {
   await writeFile(configPath(), JSON.stringify(cfg, null, 2));
 }
 
-async function readMeta(id: string): Promise<PlateMeta | null> {
+async function readMeta(id: string): Promise<CanvasMeta | null> {
   try {
-    const raw = await readFile(join(plateDir(id), FILES.meta), "utf8");
-    const parsed = JSON.parse(raw) as Partial<PlateMeta>;
-    // Normalize: older plates on disk predate description/context.
+    const raw = await readFile(join(canvasDir(id), FILES.meta), "utf8");
+    const parsed = JSON.parse(raw) as Partial<CanvasMeta>;
+    // Normalize: older canvases on disk predate description/context.
     return {
       id: parsed.id ?? id,
       title: parsed.title ?? "Untitled",
@@ -110,8 +114,8 @@ async function readMeta(id: string): Promise<PlateMeta | null> {
   }
 }
 
-async function writePlateFiles(id: string, c: Plate): Promise<void> {
-  const dir = plateDir(id);
+async function writeCanvasFiles(id: string, c: Canvas): Promise<void> {
+  const dir = canvasDir(id);
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, FILES.html), c.html);
   await writeFile(join(dir, FILES.css), c.css);
@@ -131,14 +135,14 @@ export interface CreateInput {
   source?: string;
 }
 
-export async function createPlate(input: CreateInput): Promise<PlateMeta> {
+export async function createCanvas(input: CreateInput): Promise<CanvasMeta> {
   await ensureLayout();
   const cfg = await loadConfig();
   const now = new Date().toISOString();
   // Try a few times in the unlikely case of an id collision.
   let id = generateId();
-  for (let i = 0; i < 5 && existsSync(plateDir(id)); i++) id = generateId();
-  const meta: PlateMeta = {
+  for (let i = 0; i < 5 && existsSync(canvasDir(id)); i++) id = generateId();
+  const meta: CanvasMeta = {
     id,
     title: input.title.trim() || "Untitled",
     description: (input.description ?? "").trim(),
@@ -149,7 +153,7 @@ export async function createPlate(input: CreateInput): Promise<PlateMeta> {
     createdAt: now,
     updatedAt: now,
   };
-  await writePlateFiles(id, {
+  await writeCanvasFiles(id, {
     meta,
     html: input.html,
     css: input.css ?? "",
@@ -170,12 +174,12 @@ export interface UpdateInput {
   source?: string;
 }
 
-export async function updatePlate(id: string, input: UpdateInput): Promise<{ meta: PlateMeta; version: string }> {
-  if (!isValidId(id)) throw new Error(`invalid plate id: ${id}`);
-  const existing = await getPlate(id);
-  if (!existing) throw new Error(`plate not found: ${id}`);
+export async function updateCanvas(id: string, input: UpdateInput): Promise<{ meta: CanvasMeta; version: string }> {
+  if (!isValidId(id)) throw new Error(`invalid canvas id: ${id}`);
+  const existing = await getCanvas(id);
+  if (!existing) throw new Error(`canvas not found: ${id}`);
   const version = await snapshot(id);
-  const meta: PlateMeta = {
+  const meta: CanvasMeta = {
     ...existing.meta,
     title: input.title ?? existing.meta.title,
     description: input.description ?? existing.meta.description,
@@ -185,20 +189,20 @@ export async function updatePlate(id: string, input: UpdateInput): Promise<{ met
     source: input.source ?? existing.meta.source,
     updatedAt: new Date().toISOString(),
   };
-  const next: Plate = {
+  const next: Canvas = {
     meta,
     html: input.html ?? existing.html,
     css: input.css ?? existing.css,
     js: input.js ?? existing.js,
   };
-  await writePlateFiles(id, next);
+  await writeCanvasFiles(id, next);
   await pruneVersions(id);
   return { meta, version };
 }
 
-export async function getPlate(id: string): Promise<Plate | null> {
+export async function getCanvas(id: string): Promise<Canvas | null> {
   if (!isValidId(id)) return null;
-  const dir = plateDir(id);
+  const dir = canvasDir(id);
   if (!existsSync(dir)) return null;
   const meta = await readMeta(id);
   if (!meta) return null;
@@ -210,11 +214,11 @@ export async function getPlate(id: string): Promise<Plate | null> {
   return { meta, html, css, js };
 }
 
-export async function listPlates(opts: { tag?: string; search?: string; limit?: number } = {}): Promise<PlateSummary[]> {
+export async function listCanvases(opts: { tag?: string; search?: string; limit?: number } = {}): Promise<CanvasSummary[]> {
   await ensureLayout();
   let entries: string[];
-  try { entries = await readdir(platesDir()); } catch { return []; }
-  const out: PlateSummary[] = [];
+  try { entries = await readdir(canvasesDir()); } catch { return []; }
+  const out: CanvasSummary[] = [];
   for (const id of entries) {
     if (id.startsWith(".")) continue;
     const meta = await readMeta(id);
@@ -245,10 +249,10 @@ export async function listPlates(opts: { tag?: string; search?: string; limit?: 
   return opts.limit ? out.slice(0, opts.limit) : out;
 }
 
-export async function deletePlate(id: string): Promise<void> {
-  if (!isValidId(id)) throw new Error(`invalid plate id: ${id}`);
-  const src = plateDir(id);
-  if (!existsSync(src)) throw new Error(`plate not found: ${id}`);
+export async function deleteCanvas(id: string): Promise<void> {
+  if (!isValidId(id)) throw new Error(`invalid canvas id: ${id}`);
+  const src = canvasDir(id);
+  if (!existsSync(src)) throw new Error(`canvas not found: ${id}`);
   await mkdir(trashDir(), { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const dest = join(trashDir(), `${id}__${stamp}`);
@@ -256,8 +260,8 @@ export async function deletePlate(id: string): Promise<void> {
 }
 
 async function snapshot(id: string): Promise<string> {
-  const dir = plateDir(id);
-  if (!existsSync(dir)) throw new Error(`plate not found: ${id}`);
+  const dir = canvasDir(id);
+  if (!existsSync(dir)) throw new Error(`canvas not found: ${id}`);
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const target = join(versionsDir(id), stamp);
   await mkdir(target, { recursive: true });
@@ -289,7 +293,7 @@ export async function listVersions(id: string): Promise<SnapshotInfo[]> {
     let source = "";
     try {
       const raw = await readFile(join(dir, version, FILES.meta), "utf8");
-      const m = JSON.parse(raw) as Partial<PlateMeta>;
+      const m = JSON.parse(raw) as Partial<CanvasMeta>;
       source = m.source ?? "";
     } catch { /* snapshot missing meta — leave source blank */ }
     out.push({ version, timestamp: version, source });
@@ -302,12 +306,12 @@ export async function restoreVersion(id: string, version: string): Promise<{ res
   if (!existsSync(vDir)) throw new Error(`version not found: ${version}`);
   // Snapshot current state first so the restore is itself reversible.
   await snapshot(id);
-  const dir = plateDir(id);
+  const dir = canvasDir(id);
   for (const f of Object.values(FILES)) {
     const src = join(vDir, f);
     if (existsSync(src)) await copyFile(src, join(dir, f));
   }
-  // Bump updatedAt so the plate re-sorts to the top.
+  // Bump updatedAt so the canvas re-sorts to the top.
   const meta = await readMeta(id);
   if (meta) {
     meta.updatedAt = new Date().toISOString();
@@ -320,7 +324,7 @@ export async function listAllTags(): Promise<{ name: string; count: number }[]> 
   await ensureLayout();
   const counts = new Map<string, number>();
   let entries: string[];
-  try { entries = await readdir(platesDir()); } catch { return []; }
+  try { entries = await readdir(canvasesDir()); } catch { return []; }
   for (const id of entries) {
     if (id.startsWith(".")) continue;
     const meta = await readMeta(id);
