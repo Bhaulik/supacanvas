@@ -14,6 +14,7 @@ import {
 import { renderCanvasDoc, escapeHtml } from "./render.ts";
 import { toMarkdown, toStandaloneHtml, toPrintHtml } from "./export.ts";
 import { screenshotCanvas, ChromeNotFoundError } from "./screenshot.ts";
+import { renderInstallPage } from "./install.ts";
 import type { CanvasMeta, SnapshotInfo } from "./types.ts";
 
 export function buildApp() {
@@ -23,6 +24,10 @@ export function buildApp() {
     const canvases = await listCanvases();
     const themes = await listThemes();
     return c.html(galleryHtml(canvases, themes));
+  });
+
+  app.get("/install", async (c) => {
+    return c.html(pageShell("Install Supacanvas", renderInstallPage({ includeInstallStep: true })));
   });
 
   app.get("/c/:id", async (c) => {

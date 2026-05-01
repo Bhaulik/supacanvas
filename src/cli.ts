@@ -330,6 +330,18 @@ async function main() {
       break;
     }
 
+    case "install": {
+      const cfg = await loadConfig();
+      const url = `http://localhost:${cfg.port}/install`;
+      let alive = false;
+      try { const r = await fetch(url, { signal: AbortSignal.timeout(500) }); alive = r.ok; } catch { /* none */ }
+      if (!alive) { const { url: started } = await startServer(cfg.port); console.log(`started supacanvas viewer at ${started}`); }
+      console.log(`opening ${url}`);
+      await openInBrowser(url);
+      await new Promise(r => setTimeout(r, 1500));
+      break;
+    }
+
     case "setup": {
       const home = homedir();
       const binName = process.argv[1] && process.argv[1].includes("/.bun/")
