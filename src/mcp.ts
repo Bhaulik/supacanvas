@@ -17,6 +17,7 @@ import {
   ensureLayout,
 } from "./storage.ts";
 import { toMarkdown, toStandaloneHtml } from "./export.ts";
+import { screenshotPlate } from "./screenshot.ts";
 
 interface ToolDef {
   name: string;
@@ -261,6 +262,57 @@ const tools: ToolDef[] = [
     },
   },
   {
+    name: "plate_screenshot",
+    description:
+      "Render a plate to a PNG image and return it as inline content. " +
+      "Most MCP clients (Cursor, Claude Desktop, etc.) display image content directly " +
+      "in chat — so calling this lets the user (and you, in vision-capable models) SEE " +
+      "what the plate looks like without opening a browser. Useful when reporting back " +
+      "what you built, or when iterating visually on a plate. " +
+      "Requires Chrome / Chromium / Brave / Edge / Arc installed locally. " +
+      "Set PLATE_CHROME_PATH if not auto-detected.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        width: { type: "number", description: "Viewport width in CSS pixels (default 1280)." },
+        height: { type: "number", description: "Viewport height in CSS pixels (default 800)." },
+        fullPage: { type: "boolean", description: "Capture full scrolled page rather than just the viewport (default false)." },
+        deviceScaleFactor: { type: "number", description: "Pixel ratio. 2 = retina (sharper, larger). Default 2." },
+      },
+      required: ["id"],
+    },
+    async handler(args) {
+      const id = String(args.id);
+      const plate = await getPlate(id);
+      if (!plate) throw new Error(`plate not found: ${id}`);
+      const png = await screenshotPlate(plate, {
+        width: typeof args.width === "number" ? args.width : undefined,
+        height: typeof args.height === "number" ? args.height : undefined,
+        fullPage: typeof args.fullPage === "boolean" ? args.fullPage : undefined,
+        deviceScaleFactor: typeof args.deviceScaleFactor === "number" ? args.deviceScaleFactor : undefined,
+      });
+      const cfg = await loadConfig();
+      // Return text + image content. Clients that don't render images get the metadata;
+      // clients that do (Cursor, Claude Desktop) show the image inline in chat.
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `Screenshot of "${plate.meta.title}" (plate ${plate.meta.id}).\n` +
+              `Size: ${png.length} bytes. URL: http://localhost:${cfg.port}/p/${plate.meta.id}`,
+          },
+          {
+            type: "image",
+            data: png.toString("base64"),
+            mimeType: "image/png",
+          },
+        ],
+      };
+    },
+  },
+  {
     name: "plate_open_url",
     description: "Get the localhost URL for viewing a plate in the browser.",
     inputSchema: {
@@ -276,6 +328,11 @@ const tools: ToolDef[] = [
 ];
 
 function asContentResult(value: unknown) {
+  // Handler can return a pre-shaped MCP result with a content array — pass through.
+  // plate_screenshot uses this to return image + text content directly.
+  if (value && typeof value === "object" && Array.isArray((value as { content?: unknown }).content)) {
+    return value as { content: unknown[] };
+  }
   return {
     content: [
       {

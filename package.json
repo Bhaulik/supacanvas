@@ -1,6 +1,6 @@
 {
   "name": "plate-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local-first MCP server + browser viewer for AI-generated HTML/CSS/JS plates. AI-agnostic, files on disk, themable, versioned, exportable.",
   "type": "module",
   "license": "MIT",
@@ -46,6 +46,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "hono": "^4.6.0",
+    "puppeteer-core": "^24.42.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

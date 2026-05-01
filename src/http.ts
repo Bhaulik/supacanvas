@@ -13,6 +13,7 @@ import {
 } from "./storage.ts";
 import { renderPlateDoc, escapeHtml } from "./render.ts";
 import { toMarkdown, toStandaloneHtml, toPrintHtml } from "./export.ts";
+import { screenshotPlate, ChromeNotFoundError } from "./screenshot.ts";
 import type { PlateMeta, SnapshotInfo } from "./types.ts";
 
 export function buildApp() {
@@ -67,6 +68,37 @@ export function buildApp() {
     const html = await toPrintHtml(plate);
     c.header("Cache-Control", "no-store");
     return c.html(html);
+  });
+
+  app.get("/p/:id/screenshot.png", async (c) => {
+    const plate = await getPlate(c.req.param("id"));
+    if (!plate) return c.notFound();
+    const w = c.req.query("w");
+    const h = c.req.query("h");
+    const dpr = c.req.query("dpr");
+    try {
+      const png = await screenshotPlate(plate, {
+        width: w ? Number(w) : undefined,
+        height: h ? Number(h) : undefined,
+        deviceScaleFactor: dpr ? Number(dpr) : undefined,
+        fullPage: c.req.query("full") === "1",
+      });
+      // Build the Response directly with an ArrayBuffer slice — Bun's TS lib
+      // types disagree with DOM's BodyInit on Uint8Array generics, so going
+      // via a clean ArrayBuffer avoids the type dance.
+      const ab = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength) as ArrayBuffer;
+      return new Response(ab, {
+        status: 200,
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "no-store",
+          "Content-Disposition": `inline; filename="${safeFilename(plate.meta.title)}.png"`,
+        },
+      });
+    } catch (e) {
+      const status = e instanceof ChromeNotFoundError ? 503 : 500;
+      return c.json({ error: (e as Error).message }, status);
+    }
   });
 
   // ---- JSON API ----
@@ -650,9 +682,10 @@ function viewerHtml(meta: PlateMeta, themes: string[], versions: SnapshotInfo[])
       <div class="export-row">
         <a href="/p/${encodeURIComponent(meta.id)}/export.md" class="export-link" download>Markdown</a>
         <a href="/p/${encodeURIComponent(meta.id)}/export.html" class="export-link" download>Standalone HTML</a>
+        <a href="/p/${encodeURIComponent(meta.id)}/screenshot.png" class="export-link" target="_blank" rel="noopener">PNG (Screenshot)</a>
         <a href="/p/${encodeURIComponent(meta.id)}/print" class="export-link" target="_blank" rel="noopener">PDF (Print sheet)</a>
       </div>
-      <div class="export-note">PDF opens the browser's print dialog — choose “Save as PDF.”</div>
+      <div class="export-note">PDF opens the browser's print dialog — choose “Save as PDF.” PNG renders via headless Chrome (must be installed locally).</div>
     </section>
 
     <section class="dsec">
