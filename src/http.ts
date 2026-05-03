@@ -1581,7 +1581,7 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   }
 
   function renderShareCard(s) {
-    const url = s.liveUrl || s.canonicalUrl;
+    const url = s.canonicalUrl || s.liveUrl;
     const safeUrl = escapeHtmlBrowser(url);
     const safeSlug = escapeHtmlBrowser(s.slug);
     const created = new Date(s.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -1614,11 +1614,12 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     // Show the most-recent live share (items already sorted desc by createdAt).
     const top = live[0];
     shareBannerSlug = top.slug;
-    shareBannerUrlValue = top.liveUrl || top.canonicalUrl;
-    // Show the canonical URL in the link text — that's what the user shares
-    // with people. The href points at the live URL so clicking opens it now.
+    // supacanvas.com is live — always prefer the canonical URL for both
+    // display, href, and clipboard. The workers.dev liveUrl is the fallback
+    // for the rare case where the canonical isn't populated.
+    shareBannerUrlValue = top.canonicalUrl || top.liveUrl;
     shareBannerUrl.href = shareBannerUrlValue;
-    shareBannerUrl.textContent = top.canonicalUrl || shareBannerUrlValue;
+    shareBannerUrl.textContent = shareBannerUrlValue;
     shareBannerUrl.title = shareBannerUrlValue;
     if (live.length > 1) {
       shareBannerMore.hidden = false;
@@ -1721,7 +1722,7 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
         throw new Error(body.error || ('HTTP ' + res.status));
       }
       const data = await res.json();
-      const url = data.liveUrl || data.canonicalUrl;
+      const url = data.canonicalUrl || data.liveUrl;
       // Auto-copy the URL to the clipboard so the user has it in one click
       try { await navigator.clipboard.writeText(url); } catch {}
       await loadShares();

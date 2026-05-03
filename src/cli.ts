@@ -622,9 +622,6 @@ async function main() {
         console.log(`✓ Shared! Slug: ${result.slug}`);
         console.log("");
         console.log(`  Public URL:  ${result.canonicalUrl}`);
-        console.log(`               (resolves once supacanvas.com is wired up)`);
-        console.log("");
-        console.log(`  View now:    ${result.liveUrl}`);
         console.log("");
         console.log(`  ⚠ This URL is public — anyone with it can view the canvas.`);
         console.log(`  Owner token saved to ~/.supacanvas/share-tokens.json`);
