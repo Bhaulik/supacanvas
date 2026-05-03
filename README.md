@@ -65,6 +65,20 @@ supacanvas serve     # starts the viewer at http://localhost:7777
 
 There's also a short alias — `supa` — wherever you'd type `supacanvas`.
 
+## Share a canvas publicly
+
+Files-on-disk is the default — but sometimes you want to send a canvas to someone who doesn't have supacanvas installed. `supacanvas share` uploads a single canvas as a public URL anyone can open in a browser.
+
+```sh
+supacanvas share <id>             # → public URL, owner token saved locally
+supacanvas share --list           # list shares created from this machine
+supacanvas share --revoke <slug>  # take it down
+```
+
+The share is **public** — anyone with the URL can view it. Owner tokens live in `~/.supacanvas/share-tokens.json` (mode `0600`); lose the token and you lose the ability to revoke. No accounts, no card, no telemetry, no PII collected. Free, capped at 50 shares per IP per day.
+
+Backed by a small Cloudflare Worker at `supacanvas.com` ([source](./share-api/), [architecture](./docs/SHARE_ARCHITECTURE.md)).
+
 ## For AI agents (Cursor, Claude Code, Claude Desktop, Continue, etc.)
 
 Drop [`AGENTS.md`](./AGENTS.md) into your tool's rules / system-prompt slot. The file is a tool-agnostic guide that teaches an agent how to use Supacanvas well — when to make canvases, when to screenshot back, how to fill the description / context / source / folder fields. Per-tool install paths are at the bottom of that file.

@@ -26,6 +26,7 @@ import { startServer } from "./http.ts";
 import { startMcpServer } from "./mcp.ts";
 import { toMarkdown, toStandaloneHtml } from "./export.ts";
 import { screenshotCanvas } from "./screenshot.ts";
+import { shareCanvas, revokeShare, listShares } from "./share.ts";
 
 const HELP = `supacanvas — local-first MCP for AI-generated views
 
@@ -48,6 +49,11 @@ Usage:
     supacanvas restore <id> --version <ts> [--json]
     supacanvas export <id> --format md|html [--out path]
     supacanvas screenshot <id> [--out path] [--w N] [--h N] [--dpr N] [--full]
+
+  Public sharing (uploads to supacanvas.com — files stay local too)
+    supacanvas share <id> [--json]              upload as public URL, save owner token
+    supacanvas share --revoke <slug>            take down a previously shared canvas
+    supacanvas share --list [--json]            list shares created from this machine
 
   Tags / themes / config
     supacanvas tags [--json]                tag corpus across all canvases
@@ -565,6 +571,67 @@ async function main() {
       } else {
         console.error("usage: supacanvas config get [key] | canvas config set <key> <value>");
         process.exit(2);
+      }
+      break;
+    }
+
+    case "share": {
+      // Three modes:
+      //   supacanvas share <id>            create
+      //   supacanvas share --revoke <slug> revoke
+      //   supacanvas share --list          list owned shares
+      if (flags.list === true) {
+        const shares = await listShares();
+        if (flags.json) { console.log(JSON.stringify(shares, null, 2)); break; }
+        if (shares.length === 0) {
+          console.log("(no shares yet — `supacanvas share <id>` to create one)");
+          break;
+        }
+        for (const s of shares) {
+          const status = s.exists ? "live" : "revoked";
+          const views = s.viewCount === undefined ? "?" : String(s.viewCount);
+          console.log(`${s.slug}\t${s.title}\t${status}\tviews~${views}\t${s.canonicalUrl}`);
+        }
+        break;
+      }
+
+      if (typeof flags.revoke === "string") {
+        const slug = flags.revoke;
+        try {
+          await revokeShare(slug);
+          if (flags.json) { console.log(JSON.stringify({ slug, revoked: true })); break; }
+          console.log(`✓ revoked: ${slug}`);
+        } catch (e) {
+          console.error(`revoke failed: ${(e as Error).message}`);
+          process.exit(1);
+        }
+        break;
+      }
+
+      const id = positional[0];
+      if (!id) {
+        console.error("usage:");
+        console.error("  supacanvas share <id>             create a public URL");
+        console.error("  supacanvas share --revoke <slug>  take it down");
+        console.error("  supacanvas share --list           list shares from this machine");
+        process.exit(2);
+      }
+      try {
+        const result = await shareCanvas(id);
+        if (flags.json) { console.log(JSON.stringify(result, null, 2)); break; }
+        console.log(`✓ Shared! Slug: ${result.slug}`);
+        console.log("");
+        console.log(`  Public URL:  ${result.canonicalUrl}`);
+        console.log(`               (resolves once supacanvas.com is wired up)`);
+        console.log("");
+        console.log(`  View now:    ${result.liveUrl}`);
+        console.log("");
+        console.log(`  ⚠ This URL is public — anyone with it can view the canvas.`);
+        console.log(`  Owner token saved to ~/.supacanvas/share-tokens.json`);
+        console.log(`  Revoke:      supacanvas share --revoke ${result.slug}`);
+      } catch (e) {
+        console.error(`share failed: ${(e as Error).message}`);
+        process.exit(1);
       }
       break;
     }
