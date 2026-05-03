@@ -1201,6 +1201,7 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   #share-top[data-state="ok"] { color: var(--accent); border-bottom-color: var(--accent); }
 
   /* Drawer banner — shows the current public URL above Description, wraps freely. */
+  .share-banner[hidden] { display: none; }
   .share-banner {
     padding: 12px 14px;
     background: rgba(168, 53, 45, 0.05);
