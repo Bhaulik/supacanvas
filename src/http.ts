@@ -816,13 +816,6 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     <h1 id="title-display" class="serif italic">${escapeHtml(meta.title)}</h1>
   </div>
   <div class="vbar-right">
-    <div id="share-pill" class="share-pill" hidden>
-      <span class="share-pill__icon" aria-hidden="true">∞</span>
-      <a class="share-pill__url" id="share-pill-url" target="_blank" rel="noreferrer noopener"></a>
-      <button class="share-pill__btn" id="share-pill-copy" title="Copy URL">Copy</button>
-      <button class="share-pill__btn share-pill__btn--x" id="share-pill-revoke" title="Revoke share">✕</button>
-      <span id="share-pill-more" class="share-pill__more" hidden></span>
-    </div>
     <button id="share-top">Share</button>
     <button id="rename">Rename</button>
     <button id="delete" class="danger">Discard</button>
@@ -840,6 +833,19 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   </section>
 
   <aside class="drawer">
+    <div id="share-banner" class="share-banner" hidden>
+      <div class="share-banner__head">
+        <span class="share-banner__icon" aria-hidden="true">∞</span>
+        <span class="share-banner__label">Public link</span>
+        <span id="share-banner-more" class="share-banner__more" hidden></span>
+      </div>
+      <a id="share-banner-url" class="share-banner__url" target="_blank" rel="noreferrer noopener"></a>
+      <div class="share-banner__actions">
+        <button id="share-banner-copy" class="share-banner__btn" type="button">Copy URL</button>
+        <button id="share-banner-revoke" class="share-banner__btn share-banner__btn--danger" type="button">Revoke</button>
+      </div>
+    </div>
+
     <section class="dsec">
       <div class="eyebrow">Description</div>
       <textarea id="description" rows="2" placeholder="One or two sentences. What is this canvas?">${escapeHtml(meta.description)}</textarea>
@@ -1194,72 +1200,72 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   #share-top[data-state="loading"] { color: var(--muted); border-bottom-color: transparent; cursor: progress; }
   #share-top[data-state="ok"] { color: var(--accent); border-bottom-color: var(--accent); }
 
-  /* Top-bar pill that displays the most recent live share for this canvas. */
-  .share-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 4px 3px 10px;
-    background: rgba(168, 53, 45, 0.06);
+  /* Drawer banner — shows the current public URL above Description, wraps freely. */
+  .share-banner {
+    padding: 12px 14px;
+    background: rgba(168, 53, 45, 0.05);
     border: 1px solid var(--rule);
-    border-radius: 999px;
-    max-width: 360px;
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     min-width: 0;
-    font-family: var(--mono);
-    font-size: 11px;
-    line-height: 1;
-  }
-  .share-pill__icon {
-    color: var(--accent);
-    font-size: 13px;
-    font-weight: 500;
-    flex-shrink: 0;
-    line-height: 1;
-  }
-  .share-pill__url {
-    color: var(--ink-2);
-    text-decoration: none;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 60px;
-    font-size: 11px;
-    letter-spacing: 0.02em;
-    padding: 4px 0;
-    border-bottom: 0;
   }
-  .share-pill__url:hover { color: var(--accent); }
-  .share-pill__btn {
+  .share-banner__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--mono);
     font-size: 10px;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 4px 8px;
-    border: 1px solid transparent;
-    background: transparent;
     color: var(--ink-2);
-    border-radius: 999px;
-    cursor: pointer;
-    flex-shrink: 0;
-    border-bottom: 0;
-    line-height: 1;
+    font-weight: 500;
   }
-  .share-pill__btn:hover {
-    background: var(--ink);
-    color: var(--paper);
-  }
-  .share-pill__btn.copied { background: var(--accent); color: var(--paper); }
-  .share-pill__btn--x { padding: 4px 7px; font-size: 12px; }
-  .share-pill__btn--x:hover { background: var(--accent); color: var(--paper); }
-  .share-pill__more {
-    font-family: var(--mono);
+  .share-banner__icon { color: var(--accent); font-size: 14px; line-height: 1; }
+  .share-banner__more {
+    margin-left: auto;
     font-size: 10px;
     color: var(--muted);
-    padding: 0 6px 0 2px;
-    flex-shrink: 0;
     letter-spacing: 0.05em;
+    font-weight: 400;
   }
+  .share-banner__url {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    text-decoration: none;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+    padding: 6px 8px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .share-banner__url:hover { color: var(--accent); border-color: var(--accent); }
+  .share-banner__actions { display: flex; gap: 6px; }
+  .share-banner__btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 11px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink-2);
+    border-radius: 3px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--rule);
+    flex: 1;
+  }
+  .share-banner__btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .share-banner__btn.copied { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+  .share-banner__btn--danger { flex: 0 0 auto; }
+  .share-banner__btn--danger:hover { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 
   /* Drawer list of all shares — soft, never overflows the 360px column. */
   .share-list {
@@ -1561,13 +1567,13 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   const shareList = document.getElementById('share-list');
   const shareCount = document.getElementById('share-count');
   const shareEmpty = document.getElementById('share-empty');
-  const sharePill = document.getElementById('share-pill');
-  const sharePillUrl = document.getElementById('share-pill-url');
-  const sharePillCopy = document.getElementById('share-pill-copy');
-  const sharePillRevoke = document.getElementById('share-pill-revoke');
-  const sharePillMore = document.getElementById('share-pill-more');
-  let sharePillSlug = null;
-  let sharePillUrlValue = '';
+  const shareBanner = document.getElementById('share-banner');
+  const shareBannerUrl = document.getElementById('share-banner-url');
+  const shareBannerCopy = document.getElementById('share-banner-copy');
+  const shareBannerRevoke = document.getElementById('share-banner-revoke');
+  const shareBannerMore = document.getElementById('share-banner-more');
+  let shareBannerSlug = null;
+  let shareBannerUrlValue = '';
 
   function escapeHtmlBrowser(s) {
     return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -1595,40 +1601,36 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     ].join('');
   }
 
-  function shortUrl(u) {
-    // Strip protocol and the long workers.dev host for compact display in the pill.
-    return u.replace(/^https?:\/\//, '')
-            .replace(/^supacanvas-share-api\.[a-z0-9-]+\.workers\.dev/i, 'supacanvas.com');
-  }
-
-  function renderSharePill(items) {
-    if (!sharePill) return;
+  function renderShareBanner(items) {
+    if (!shareBanner) return;
     const live = (items || []).filter((s) => s.exists !== false);
     if (live.length === 0) {
-      sharePill.hidden = true;
-      sharePillSlug = null;
-      sharePillUrlValue = '';
+      shareBanner.hidden = true;
+      shareBannerSlug = null;
+      shareBannerUrlValue = '';
       return;
     }
     // Show the most-recent live share (items already sorted desc by createdAt).
     const top = live[0];
-    sharePillSlug = top.slug;
-    sharePillUrlValue = top.liveUrl || top.canonicalUrl;
-    sharePillUrl.href = sharePillUrlValue;
-    sharePillUrl.textContent = shortUrl(top.canonicalUrl || sharePillUrlValue);
-    sharePillUrl.title = sharePillUrlValue;
+    shareBannerSlug = top.slug;
+    shareBannerUrlValue = top.liveUrl || top.canonicalUrl;
+    // Show the canonical URL in the link text — that's what the user shares
+    // with people. The href points at the live URL so clicking opens it now.
+    shareBannerUrl.href = shareBannerUrlValue;
+    shareBannerUrl.textContent = top.canonicalUrl || shareBannerUrlValue;
+    shareBannerUrl.title = shareBannerUrlValue;
     if (live.length > 1) {
-      sharePillMore.hidden = false;
-      sharePillMore.textContent = '+' + (live.length - 1);
-      sharePillMore.title = (live.length - 1) + ' more share' + (live.length - 1 === 1 ? '' : 's') + ' for this canvas (see drawer)';
+      shareBannerMore.hidden = false;
+      shareBannerMore.textContent = '+' + (live.length - 1) + ' more';
+      shareBannerMore.title = (live.length - 1) + ' more share' + (live.length - 1 === 1 ? '' : 's') + ' for this canvas (see Public links section below)';
     } else {
-      sharePillMore.hidden = true;
+      shareBannerMore.hidden = true;
     }
-    sharePill.hidden = false;
+    shareBanner.hidden = false;
   }
 
   function renderShareList(items) {
-    renderSharePill(items);
+    renderShareBanner(items);
     if (!items || items.length === 0) {
       shareList.innerHTML = '';
       shareCount.textContent = '';
@@ -1678,27 +1680,27 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     } catch {}
   }
 
-  sharePillCopy?.addEventListener('click', async () => {
-    if (!sharePillUrlValue) return;
+  shareBannerCopy?.addEventListener('click', async () => {
+    if (!shareBannerUrlValue) return;
     try {
-      await navigator.clipboard.writeText(sharePillUrlValue);
-      sharePillCopy.classList.add('copied');
-      const original = sharePillCopy.textContent;
-      sharePillCopy.textContent = '✓';
-      setTimeout(() => { sharePillCopy.classList.remove('copied'); sharePillCopy.textContent = original; }, 1200);
+      await navigator.clipboard.writeText(shareBannerUrlValue);
+      shareBannerCopy.classList.add('copied');
+      const original = shareBannerCopy.textContent;
+      shareBannerCopy.textContent = 'Copied ✓';
+      setTimeout(() => { shareBannerCopy.classList.remove('copied'); shareBannerCopy.textContent = original; }, 1200);
     } catch {}
   });
 
-  sharePillRevoke?.addEventListener('click', async () => {
-    if (!sharePillSlug) return;
+  shareBannerRevoke?.addEventListener('click', async () => {
+    if (!shareBannerSlug) return;
     if (!confirm('Revoke this share? The URL will return 410 Gone immediately.')) return;
-    sharePillRevoke.disabled = true;
+    shareBannerRevoke.disabled = true;
     const res = await fetch('/api/canvases/' + encodeURIComponent(id) + '/unshare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: sharePillSlug }),
+      body: JSON.stringify({ slug: shareBannerSlug }),
     });
-    sharePillRevoke.disabled = false;
+    shareBannerRevoke.disabled = false;
     if (res.ok) {
       await loadShares();
     } else {
