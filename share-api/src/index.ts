@@ -20,6 +20,7 @@ import {
   renderLanding,
   renderLlmsTxt,
   renderNotFound,
+  renderSkillMd,
   renderUseCases,
   renderViewer,
 } from "./viewer";
@@ -302,6 +303,17 @@ app.get("/llms.txt", (c) => {
 // /.well-known/llms.txt — formal well-known path mirroring the same content
 app.get("/.well-known/llms.txt", (c) => {
   return new Response(renderLlmsTxt(), {
+    headers: {
+      "content-type": "text/markdown; charset=utf-8",
+      "cache-control": "public, max-age=600",
+      "access-control-allow-origin": "*",
+    },
+  });
+});
+
+// ============================================================ GET /skill.md (Claude Code skill / Cursor rules / Continue prompt)
+app.get("/skill.md", (c) => {
+  return new Response(renderSkillMd(), {
     headers: {
       "content-type": "text/markdown; charset=utf-8",
       "cache-control": "public, max-age=600",

@@ -234,6 +234,84 @@ REFERENCES:
 - npm package: https://www.npmjs.com/package/supacanvas`;
 
 // =====================================================================
+// /skill.md — Claude Code skill / Cursor rules / Continue system prompt.
+// Frontmatter + body. Drops into ~/.claude/skills/supacanvas/SKILL.md
+// or .cursor/rules/supacanvas.mdc or ~/.continue/system.md.
+// Mirror of repo's SKILL.md — keep in sync.
+// =====================================================================
+export function renderSkillMd(): string {
+  return `---
+name: supacanvas
+description: Use supacanvas whenever the user asks for a visual artifact — dashboards, mockups, diagrams, status boards, sequence diagrams, prototypes, calculators, slide decks, charts, interactive tools, anything HTML/CSS/JS. Capture the artifact in supacanvas instead of replying with prose, and call canvas_screenshot after every create so the PNG renders inline in chat. Files live at ~/.supacanvas/canvases/ as plain HTML/CSS/JS — yours forever, no telemetry, MIT. Requires \`npm install -g supacanvas\` plus the supacanvas MCP server configured in this client (or the supacanvas CLI on PATH as a fallback).
+---
+
+# Supacanvas — agent rules
+
+Supacanvas is the local-first workspace for the visual artifacts you build for the user. Files on disk, no accounts, no telemetry. Brand: https://supacanvas.com.
+
+## When to reach for a canvas (instead of prose)
+
+Use a canvas when the user asks for:
+- **Dashboards, status boards** — KPI views, OKR trackers, sprint boards, service-health monitors
+- **Mockups & UI** — landing pages, settings, auth screens, e-commerce pages
+- **Diagrams & architecture** — system maps, sequence, ER, data pipelines, decision trees
+- **Data visualizations** — bar / line / pie charts, choropleth maps, sankey funnels, heatmaps
+- **Interactive tools** — calculators, timers, color pickers, JSON formatters, working clocks
+- **Slides & decks** — pitch decks, workshop slides, conference talks
+- **Long-form documents** — resumes, changelogs, RFCs, recipe cards
+- **Games** — tic-tac-toe, calculators, minesweeper, anything client-side
+- Any *"show me what X looks like"* or *"make me a visual of Y"* request
+
+Don't use a canvas for plain text answers, code-the-user-edits-themselves, conversation, or things that won't outlive the chat.
+
+## How to invoke
+
+If supacanvas MCP is configured in this client, call the tools directly:
+- canvas_create(title, html, css?, js?, description, context?, source, folder?, tags?, theme?)
+- canvas_update(id, ...)
+- canvas_screenshot(id) — **always call after create**
+- canvas_list(search?, folder?, ...) — **search before creating**
+- canvas_get / canvas_move / canvas_delete / canvas_versions / canvas_restore / canvas_export / canvas_open_url
+- folder_list / folder_rename / theme_list
+
+If MCP isn't configured but the supacanvas CLI is on PATH, fall back to shell:
+\`supacanvas new --title "..." --html-file - --description "..." --source "this:model" --json\`
+\`supacanvas screenshot <id> --out /tmp/preview.png\`
+
+## Required habits — every canvas write
+
+1. **Always set description** (1-2 sentences). Bad: "Dashboard". Good: "Q3 revenue dashboard with bars for NA/EMEA/APAC, sourced from Salesforce export 2026-04-30."
+2. **Set source** every create AND update. Format: "tool:model" — e.g. "claude-code:claude-opus-4-7", "cursor:claude-opus-4", "codex:gpt-5".
+3. **Use context** for canvases involving data — longer paragraph on sources, assumptions, what not to change.
+4. **Reuse folders** — call folder_list() FIRST. Don't invent "dashboards-v2" when "dashboards" exists.
+5. **Search before creating** — canvas_list({search:"keyword"}) to avoid duplicates.
+6. **Always screenshot after create** — canvas_screenshot(id). PNG renders inline in chat.
+
+## Patterns
+
+**"Build me a dashboard for X"** → canvas_list (search) → canvas_create → canvas_screenshot → return URL.
+**"Update the clock canvas"** → canvas_list (search) → canvas_get → canvas_update → canvas_screenshot.
+**"What canvases do I have for Atlas?"** → folder_list → canvas_list({folder:"atlas",descendants:true}).
+
+## Returns
+
+canvas_create returns {id, title, ...}. The canvas is at:
+- File: ~/.supacanvas/canvases/<id>/
+- URL: http://localhost:7777/c/<id> (when \`supacanvas serve\` is running)
+
+Hand the URL to the user.
+
+## Resources
+
+- Live site: https://supacanvas.com
+- 42 ready-to-copy prompts: https://supacanvas.com/uses
+- npm: https://www.npmjs.com/package/supacanvas
+- GitHub: https://github.com/Bhaulik/supacanvas
+- llms.txt: https://supacanvas.com/llms.txt
+`;
+}
+
+// =====================================================================
 // /llms.txt — machine-readable spec following the llmstxt.org standard.
 // Returned as text/markdown so LLM crawlers and agents can ingest it.
 // =====================================================================
@@ -583,6 +661,116 @@ export function renderLanding(): string {
     }
     .meta span { padding: 0 10px; }
     .meta span + span { border-left: 1px solid var(--rule); }
+
+    /* ============================================================ SKILL SECTION (drop-in for skills/rules) */
+    .skill {
+      padding-top: 48px;
+      border-top: 1px solid var(--rule);
+      margin-top: 36px;
+    }
+    .skill__head {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .skill__title {
+      font-family: var(--display);
+      font-weight: 300;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+      color: var(--ink);
+    }
+    .skill__title em { font-style: italic; color: var(--accent); font-weight: 400; }
+    .skill__sub {
+      font-size: 14px;
+      color: var(--ink-faint);
+      margin: 0 auto;
+      max-width: 56ch;
+      line-height: 1.55;
+    }
+    .skill__sub code {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      background: var(--paper-tint);
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--rule);
+      color: var(--accent);
+    }
+    .skill__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .skill__card {
+      background: var(--paper-tint);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 200ms var(--easing), transform 200ms var(--easing);
+    }
+    .skill__card:hover {
+      border-color: var(--rule-strong);
+      transform: translateY(-1px);
+    }
+    .skill__card__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .skill__card__name {
+      font-family: var(--display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 22px;
+      line-height: 1;
+      margin: 0;
+      color: var(--ink);
+    }
+    .skill__card__where {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      white-space: nowrap;
+    }
+    .skill__card__hint {
+      font-size: 12.5px;
+      color: var(--ink-soft);
+      line-height: 1.45;
+      margin: 0;
+    }
+    .skill__card__hint code {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--paper);
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid var(--rule);
+    }
+    .skill__manual {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      letter-spacing: 0.04em;
+    }
+    .skill__manual a {
+      color: var(--ink-soft);
+      border-bottom: 1px solid var(--rule);
+    }
+    .skill__manual a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+    @media (max-width: 760px) {
+      .skill__grid { grid-template-columns: 1fr; }
+    }
 
     /* ============================================================ CONNECT */
     .connect {
@@ -1102,10 +1290,44 @@ export function renderLanding(): string {
       </div>
     </section>
 
+    <section class="skill">
+      <header class="skill__head">
+        <h2 class="skill__title">Drop in as a <em>skill</em></h2>
+        <p class="skill__sub">One <code>curl</code> drops the supacanvas instructions into your AI's auto-loaded skills / rules folder. The agent picks it up on next launch and knows exactly when + how to make canvases. Pair with the MCP install below for full power.</p>
+      </header>
+      <div class="skill__grid">
+        ${(() => {
+          const ccCmd = "mkdir -p ~/.claude/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.claude/skills/supacanvas/SKILL.md";
+          const cursorCmd = "mkdir -p .cursor/rules && curl -fsSL https://supacanvas.com/skill.md > .cursor/rules/supacanvas.mdc";
+          const continueCmd = "mkdir -p ~/.continue && curl -fsSL https://supacanvas.com/skill.md >> ~/.continue/system.md";
+          return [
+            { name: "Claude Code", where: "~/.claude/skills/", cmd: ccCmd, hint: "Auto-loaded global skill. Restart Claude Code after installing." },
+            { name: "Cursor", where: ".cursor/rules/", cmd: cursorCmd, hint: "Project-level rule. Run from your repo root. Reopen Cursor to pick it up." },
+            { name: "Continue", where: "~/.continue/", cmd: continueCmd, hint: "Appends to your global system prompt. Reload the Continue extension." },
+          ].map((c) => `
+            <article class="skill__card">
+              <div class="skill__card__head">
+                <h3 class="skill__card__name">${c.name}</h3>
+                <span class="skill__card__where">${c.where}</span>
+              </div>
+              <div class="snippet">
+                <pre>${escapeForHtml(c.cmd)}</pre>
+                <button class="snippet__btn" data-copy="${escapeForAttr(c.cmd)}" type="button">Copy</button>
+              </div>
+              <p class="skill__card__hint">${c.hint}</p>
+            </article>
+          `).join("");
+        })()}
+      </div>
+      <p class="skill__manual">
+        Other tools (Claude Desktop, ChatGPT custom instructions, Codex CLI, opencode, etc.) — paste the contents of <a href="/skill.md">supacanvas.com/skill.md</a> into your tool's rules / system-prompt slot.
+      </p>
+    </section>
+
     <section class="connect">
       <header class="connect__head">
         <h2 class="connect__title">Add to your <em>AI tool</em></h2>
-        <p class="connect__sub">One click for Cursor and VS Code. One paste for the rest.</p>
+        <p class="connect__sub">One click for Cursor and VS Code. One paste for the rest. Pair with the skill above for the full effect.</p>
       </header>
 
       <div class="featured">
@@ -1220,7 +1442,7 @@ export function renderLanding(): string {
         <button class="agent__btn" data-copy="${escapeForAttr(AGENT_SETUP_PROMPT)}" type="button">Copy setup prompt</button>
         <span class="agent__alt">or point your agent at <a href="/llms.txt">supacanvas.com/llms.txt</a></span>
       </div>
-      <p class="agent__how"><strong>How it works:</strong> the prompt tells the agent to detect which client it's running in, run <code style="font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px;">npm install -g supacanvas</code>, write the matching MCP config to disk, and verify with <code style="font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px;">canvas_list</code> after you restart. Works on Cursor, Claude Code, Codex CLI, opencode, Continue, Factory droid, and any other MCP client.</p>
+      <p class="agent__how"><strong>How it works:</strong> the prompt tells the agent to detect which client it's running in, run <code style="font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px;">npm install -g supacanvas</code>, write the matching MCP config to disk, and verify with <code style="font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px;">canvas_list</code> after you restart. Works on Cursor, Claude Code, Codex CLI, opencode, Continue, Factory droid, and any other MCP client. Or use the <a href="#" onclick="document.querySelector('.skill').scrollIntoView({behavior:'smooth'});return false;" style="color: #e8a89c; border-bottom: 1px solid rgba(232, 168, 156, 0.4);">drop-in skill</a> instead — instructions only, no shell required.</p>
     </section>
 
     <section class="security">
