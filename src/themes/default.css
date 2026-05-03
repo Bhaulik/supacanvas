@@ -1,0 +1,87 @@
+/* Supacanvas — default theme.
+   Targets generic semantics so AI-generated canvases that use plain
+   HTML elements inherit a sensible look without coordination. */
+
+:root {
+  --uc-bg: #ffffff;
+  --uc-fg: #1a1d23;
+  --uc-muted: #5c6573;
+  --uc-accent: #2f6df3;
+  --uc-border: #e4e7ee;
+  --uc-card: #f7f8fb;
+  --uc-radius: 12px;
+  --uc-pad: 24px;
+  --uc-font: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --uc-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --uc-bg: #0e0f12;
+    --uc-fg: #e7e9ee;
+    --uc-muted: #8a8f9a;
+    --uc-accent: #7aa2ff;
+    --uc-border: #2a2e37;
+    --uc-card: #16181d;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--uc-bg);
+  color: var(--uc-fg);
+  font-family: var(--uc-font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { padding: var(--uc-pad); }
+
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; margin: 0 0 .4em; }
+h1 { font-size: 1.8em; }
+h2 { font-size: 1.4em; }
+h3 { font-size: 1.15em; }
+
+p { margin: 0 0 1em; }
+
+a { color: var(--uc-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, pre {
+  font-family: var(--uc-mono);
+  background: var(--uc-card);
+  border: 1px solid var(--uc-border);
+  border-radius: 6px;
+}
+code { padding: 1px 5px; font-size: 0.9em; }
+pre { padding: 12px 14px; overflow: auto; }
+pre code { background: transparent; border: 0; padding: 0; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--uc-card);
+  border: 1px solid var(--uc-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+button { cursor: pointer; transition: background 120ms ease; }
+button:hover { background: var(--uc-border); }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--uc-accent); outline-offset: 1px; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--uc-border); text-align: left; }
+th { font-weight: 600; color: var(--uc-muted); }
+
+.card {
+  background: var(--uc-card);
+  border: 1px solid var(--uc-border);
+  border-radius: var(--uc-radius);
+  padding: 16px 18px;
+}
+
+hr { border: 0; border-top: 1px solid var(--uc-border); margin: 1.5em 0; }
