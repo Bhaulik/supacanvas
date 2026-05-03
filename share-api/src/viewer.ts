@@ -450,12 +450,12 @@ export function renderLanding(): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Supacanvas — understand what your agents are doing, visually</title>
-  <meta name="description" content="Understand what your Agents are doing — visually, easily. Local-first MCP server + viewer for the dashboards, mockups, diagrams, and prototypes your AI tools build.">
+  <title>Supacanvas — a dedicated studio for your AI agents</title>
+  <meta name="description" content="A dedicated studio for your Agents to help you visualize anything — local first & sharable if you want. MCP server + viewer for the dashboards, mockups, diagrams, and prototypes your AI tools build.">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Supacanvas">
-  <meta property="og:description" content="Understand what your Agents are doing — visually, easily.">
+  <meta property="og:title" content="Supacanvas — a dedicated studio for your AI agents">
+  <meta property="og:description" content="A dedicated studio for your Agents to help you visualize anything — local first & sharable if you want.">
   <meta property="og:url" content="https://supacanvas.com">
 
   <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM-friendly spec">
@@ -1485,7 +1485,7 @@ export function renderLanding(): string {
         <span class="wordmark__supa">Supa</span><span class="wordmark__canvas">canvas</span>
       </h1>
 
-      <p class="tagline">Understand what your <strong>Agents</strong> are doing — <em>visually, easily.</em></p>
+      <p class="tagline">A dedicated studio for your <strong>Agents</strong> to help you visualize anything — <em>local first &amp; sharable if you want.</em></p>
 
       <div class="install" role="group" aria-label="Install command">
         <span class="install__cmd">${INSTALL_CMD}</span>
