@@ -585,9 +585,9 @@ export function renderLanding(): string {
       margin: 0 auto 48px;
       max-width: 22ch;
     }
-    .tagline strong {
+    .tagline strong, .tagline em {
       font-style: italic;
-      font-weight: 400;
+      font-weight: 500;
       color: var(--accent);
     }
 
@@ -1485,7 +1485,7 @@ export function renderLanding(): string {
         <span class="wordmark__supa">Supa</span><span class="wordmark__canvas">canvas</span>
       </h1>
 
-      <p class="tagline">A dedicated studio for your <strong>Agents</strong> to help you visualize anything — <em>local first &amp; sharable if you want.</em></p>
+      <p class="tagline">A dedicated <em>studio</em> for your Agents to help you <em>visualize</em> anything — <em>local</em> first &amp; <em>sharable</em> if you want.</p>
 
       <div class="install" role="group" aria-label="Install command">
         <span class="install__cmd">${INSTALL_CMD}</span>
