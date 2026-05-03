@@ -842,7 +842,22 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
       <a id="share-banner-url" class="share-banner__url" target="_blank" rel="noreferrer noopener"></a>
       <div class="share-banner__actions">
         <button id="share-banner-copy" class="share-banner__btn" type="button">Copy URL</button>
+        <button id="share-banner-qr" class="share-banner__btn" type="button" title="Show QR code so someone can scan it on their phone">QR</button>
         <button id="share-banner-revoke" class="share-banner__btn share-banner__btn--danger" type="button">Revoke</button>
+      </div>
+    </div>
+
+    <div id="qr-modal" class="qr-modal" hidden role="dialog" aria-modal="true" aria-label="QR code for the public share">
+      <div class="qr-modal__backdrop" data-act="close"></div>
+      <div class="qr-modal__panel">
+        <button class="qr-modal__close" type="button" data-act="close" aria-label="Close">×</button>
+        <div class="qr-modal__head">
+          <span class="qr-modal__icon">∞</span>
+          <span class="qr-modal__label">Scan to view</span>
+        </div>
+        <div class="qr-modal__art" id="qr-modal-art"></div>
+        <a id="qr-modal-url" class="qr-modal__url" target="_blank" rel="noreferrer noopener"></a>
+        <div class="qr-modal__hint">Point a phone camera at the code, or share the URL.</div>
       </div>
     </div>
 
@@ -1267,6 +1282,116 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   .share-banner__btn.copied { background: var(--accent); color: var(--paper); border-color: var(--accent); }
   .share-banner__btn--danger { flex: 0 0 auto; }
   .share-banner__btn--danger:hover { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+  /* ----- QR modal ----- */
+  .qr-modal[hidden] { display: none; }
+  .qr-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: qrFade 180ms ease-out;
+  }
+  .qr-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 22, 20, 0.62);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+  .qr-modal__panel {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--rule-strong, #b9aa86);
+    border-radius: 10px;
+    padding: 28px 28px 24px;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 24px 60px -16px rgba(0, 0, 0, 0.4);
+    animation: qrPop 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    text-align: center;
+  }
+  .qr-modal__close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: 0;
+    font-size: 24px;
+    color: var(--ink-2);
+    cursor: pointer;
+    line-height: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: color 140ms ease, background 140ms ease;
+  }
+  .qr-modal__close:hover { color: var(--accent); background: var(--paper-2); }
+  .qr-modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 18px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+  .qr-modal__icon { color: var(--accent); font-size: 14px; }
+  .qr-modal__art {
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 16px;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-modal__art img { width: 100%; height: 100%; display: block; }
+  .qr-modal__art .qr-loading {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .qr-modal__url {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-2);
+    word-break: break-all;
+    border-bottom: 0;
+    padding: 6px 8px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .qr-modal__url:hover { color: var(--accent); }
+  .qr-modal__hint {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  @keyframes qrFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes qrPop {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
 
   /* Drawer list of all shares — soft, never overflows the 360px column. */
   .share-list {
@@ -1708,6 +1833,43 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     } else {
       alert('Revoke failed: ' + (await res.text()));
     }
+  });
+
+  // ----- QR modal -----
+  // Opens a centered modal with a QR code for the share URL so someone can
+  // scan it on their phone. QR is generated by api.qrserver.com (free, no
+  // API key, returns PNG). The share URL is already public so no privacy
+  // implication beyond the user's own IP hitting the QR service.
+  const shareBannerQr = document.getElementById('share-banner-qr');
+  const qrModal = document.getElementById('qr-modal');
+  const qrArt = document.getElementById('qr-modal-art');
+  const qrUrlLink = document.getElementById('qr-modal-url');
+
+  function openQrModal() {
+    if (!qrModal || !qrArt || !qrUrlLink || !shareBannerUrlValue) return;
+    qrUrlLink.href = shareBannerUrlValue;
+    qrUrlLink.textContent = shareBannerUrlValue;
+    qrArt.innerHTML = '<span class="qr-loading">generating…</span>';
+    const src = 'https://api.qrserver.com/v1/create-qr-code/?size=512x512&margin=8&data=' + encodeURIComponent(shareBannerUrlValue);
+    const img = new Image();
+    img.alt = 'QR code for ' + shareBannerUrlValue;
+    img.onload = () => { qrArt.innerHTML = ''; qrArt.appendChild(img); };
+    img.onerror = () => { qrArt.innerHTML = '<span class="qr-loading">qr unavailable — check your network</span>'; };
+    img.src = src;
+    qrModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeQrModal() {
+    if (!qrModal) return;
+    qrModal.hidden = true;
+    document.body.style.overflow = '';
+  }
+  shareBannerQr?.addEventListener('click', openQrModal);
+  qrModal?.querySelectorAll('[data-act="close"]').forEach((el) => {
+    el.addEventListener('click', closeQrModal);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && qrModal && !qrModal.hidden) closeQrModal();
   });
 
   shareTop?.addEventListener('click', async () => {
