@@ -450,12 +450,12 @@ export function renderLanding(): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Supacanvas — the visual interface layer for AI agents</title>
-  <meta name="description" content="The visual interface layer for AI agents. Local-first MCP server + viewer for the dashboards, mockups, diagrams, and prototypes your AI tools build. Yours forever.">
+  <title>Supacanvas — understand what your agents are doing, visually</title>
+  <meta name="description" content="Understand what your Agents are doing — visually, easily. Local-first MCP server + viewer for the dashboards, mockups, diagrams, and prototypes your AI tools build.">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Supacanvas — the visual interface layer for AI agents">
-  <meta property="og:description" content="Local-first MCP server for the canvases your AI tools build. Yours on disk, exportable, MIT.">
+  <meta property="og:title" content="Supacanvas">
+  <meta property="og:description" content="Understand what your Agents are doing — visually, easily.">
   <meta property="og:url" content="https://supacanvas.com">
 
   <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM-friendly spec">
@@ -1485,7 +1485,7 @@ export function renderLanding(): string {
         <span class="wordmark__supa">Supa</span><span class="wordmark__canvas">canvas</span>
       </h1>
 
-      <p class="tagline">The visual interface layer for <em>AI agents</em>.</p>
+      <p class="tagline">Understand what your <strong>Agents</strong> are doing — <em>visually, easily.</em></p>
 
       <div class="install" role="group" aria-label="Install command">
         <span class="install__cmd">${INSTALL_CMD}</span>
