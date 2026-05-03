@@ -1,8 +1,8 @@
 # Supacanvas
 
-> A local-first MCP server + browser viewer for AI-generated HTML/CSS/JS canvases. **Yours on disk. Plug into any AI tool. Export anywhere.**
+> **The workspace for everything your AI tools build.** Every dashboard, mockup, and diagram your agents create — captured, searchable, exportable, and yours forever. Works with Claude, Cursor, and any AI tool that speaks MCP.
 
-Think Claude Artifacts, but:
+Under the hood:
 
 - **AI-agnostic** — speaks the [Model Context Protocol](https://modelcontextprotocol.io) over stdio, so any MCP client (Claude Desktop, Claude Code, Cursor, ChatGPT desktop, Continue, etc.) can drive it.
 - **Files on disk** — every canvas is a folder under `~/.supacanvas/` containing `index.html`, `style.css`, `script.js`, `meta.json`. Open them in any editor, back them up, copy them around.
