@@ -816,6 +816,7 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     <h1 id="title-display" class="serif italic">${escapeHtml(meta.title)}</h1>
   </div>
   <div class="vbar-right">
+    <button id="share-top">Share</button>
     <button id="rename">Rename</button>
     <button id="delete" class="danger">Discard</button>
   </div>
@@ -887,14 +888,11 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
 
     <section class="dsec share-sec">
       <div class="dsec-head">
-        <div class="eyebrow">Public link</div>
+        <div class="eyebrow">Public links</div>
         <span class="mono small muted" id="share-count"></span>
       </div>
-      <button id="share-create" class="share-btn" type="button">
-        <span class="share-btn__title">Share publicly</span>
-        <span class="share-btn__sub">Anyone with the URL can view this canvas</span>
-      </button>
       <div id="share-list" class="share-list"></div>
+      <div id="share-empty" class="empty-note share-empty">No public links yet. Click <strong>Share</strong> at the top of the page to create one.</div>
       <div class="export-note share-note">Owner tokens stay in <code>~/.supacanvas/share-tokens.json</code>. Hosted free at supacanvas.com — no account, no card, capped at 50/day per IP.</div>
     </section>
 
@@ -1186,29 +1184,12 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   .export-note { font-size: 13px; line-height: 1.55; color: var(--muted); padding-top: 10px; }
 
   /* ----- Public sharing ----- */
-  .share-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    width: 100%;
-    padding: 12px 14px;
-    background: var(--ink);
-    color: var(--paper);
-    border: 1px solid var(--ink);
-    border-radius: 5px;
-    cursor: pointer;
-    font-family: inherit;
-    text-align: left;
-    transition: background 120ms ease, transform 80ms ease;
-  }
-  .share-btn:hover { background: var(--accent); border-color: var(--accent); }
-  .share-btn:active { transform: translateY(1px); }
-  .share-btn[disabled] { opacity: 0.6; cursor: progress; }
-  .share-btn__title { font-family: var(--display); font-style: italic; font-size: 17px; line-height: 1.2; }
-  .share-btn__sub { font-size: 12px; color: rgba(245, 240, 230, 0.72); line-height: 1.3; }
+  #share-top[data-state="loading"] { color: var(--muted); border-bottom-color: transparent; cursor: progress; }
+  #share-top[data-state="ok"] { color: var(--accent); border-bottom-color: var(--accent); }
 
-  .share-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .share-list { display: flex; flex-direction: column; gap: 8px; }
+  .share-list:empty + .share-empty { display: block; }
+  .share-list:not(:empty) + .share-empty { display: none; }
   .share-list:empty { margin-top: 0; }
   .share-card {
     border: 1px solid var(--rule);
@@ -1492,9 +1473,10 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   });
 
   // ----- Public sharing -----
-  const shareCreate = document.getElementById('share-create');
+  const shareTop = document.getElementById('share-top');
   const shareList = document.getElementById('share-list');
   const shareCount = document.getElementById('share-count');
+  const shareEmpty = document.getElementById('share-empty');
 
   function escapeHtmlBrowser(s) {
     return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -1526,8 +1508,10 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     if (!items || items.length === 0) {
       shareList.innerHTML = '';
       shareCount.textContent = '';
+      if (shareEmpty) shareEmpty.style.display = '';
       return;
     }
+    if (shareEmpty) shareEmpty.style.display = 'none';
     shareList.innerHTML = items.map(renderShareCard).join('');
     shareCount.textContent = items.length === 1 ? '1 link' : items.length + ' links';
     shareList.querySelectorAll('.share-card').forEach((card) => {
@@ -1570,23 +1554,32 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
     } catch {}
   }
 
-  shareCreate?.addEventListener('click', async () => {
+  shareTop?.addEventListener('click', async () => {
     if (!confirm('Create a public URL for this canvas? Anyone with the link will be able to view it.')) return;
-    shareCreate.disabled = true;
-    const originalTitle = shareCreate.querySelector('.share-btn__title').textContent;
-    shareCreate.querySelector('.share-btn__title').textContent = 'Uploading…';
+    const originalText = shareTop.textContent;
+    shareTop.dataset.state = 'loading';
+    shareTop.textContent = 'Uploading…';
     try {
       const res = await fetch('/api/canvases/' + encodeURIComponent(id) + '/share', { method: 'POST' });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || ('HTTP ' + res.status));
       }
+      const data = await res.json();
+      const url = data.liveUrl || data.canonicalUrl;
+      // Auto-copy the URL to the clipboard so the user has it in one click
+      try { await navigator.clipboard.writeText(url); } catch {}
       await loadShares();
+      shareTop.dataset.state = 'ok';
+      shareTop.textContent = 'Copied URL ✓';
+      setTimeout(() => {
+        delete shareTop.dataset.state;
+        shareTop.textContent = originalText;
+      }, 1800);
     } catch (e) {
       alert('Share failed: ' + e.message);
-    } finally {
-      shareCreate.disabled = false;
-      shareCreate.querySelector('.share-btn__title').textContent = originalTitle;
+      delete shareTop.dataset.state;
+      shareTop.textContent = originalText;
     }
   });
 
