@@ -4,15 +4,24 @@ compatibility_date = "2026-05-01"
 workers_dev = true
 
 # ====================================================================
-# KV namespaces — create them, then paste the IDs below.
-#
+# Custom domains for supacanvas.com and www.supacanvas.com are added
+# via the Cloudflare dashboard (Workers & Pages → supacanvas-share-api
+# → Settings → Triggers → Add Custom Domain). The dashboard handles
+# the DNS-record conflict prompt that this current wrangler version
+# can't override from the CLI (override_existing_dns_record requires
+# wrangler 4.87+, which needs Node 22).
+# ====================================================================
+
+# ====================================================================
+# Public URL of this deployment, used by the viewer for OG image links.
+# ====================================================================
+[vars]
+PUBLIC_BASE_URL = "https://supacanvas.com"
+
+# ====================================================================
+# KV namespaces — created via:
 #   wrangler kv namespace create SHARE_META
 #   wrangler kv namespace create SHARE_RATELIMIT
-#
-# Each command prints something like:
-#   [[kv_namespaces]]
-#   binding = "SHARE_META"
-#   id = "abc123def456..."
 # ====================================================================
 [[kv_namespaces]]
 binding = "SHARE_META"
@@ -23,22 +32,9 @@ binding = "SHARE_RATELIMIT"
 id = "085eedbdca834f6bac7cb81b49016b31"
 
 # ====================================================================
-# R2 bucket — create with:
+# R2 bucket — created via:
 #   wrangler r2 bucket create supacanvas-share
 # ====================================================================
 [[r2_buckets]]
 binding = "SHARE_BUCKET"
 bucket_name = "supacanvas-share"
-
-# ====================================================================
-# Custom domain — uncomment once supacanvas.com is set up in Cloudflare
-# (Add the domain to your CF account first, then deploy).
-# ====================================================================
-# routes = [
-#   { pattern = "supacanvas.com/*", zone_name = "supacanvas.com" },
-#   { pattern = "www.supacanvas.com/*", zone_name = "supacanvas.com" }
-# ]
-
-# Public URL of this deployment, used by the viewer for OG image links etc.
-[vars]
-PUBLIC_BASE_URL = "https://supacanvas.com"
