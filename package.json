@@ -1,6 +1,6 @@
 {
   "name": "supacanvas",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "description": "The workspace for every dashboard, mockup, and diagram your AI tools build. Captured, searchable, exportable, yours forever. Works with Claude, Cursor, and any AI tool that speaks MCP.",
   "type": "module",
   "license": "MIT",
@@ -38,7 +38,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun build src/cli.ts --outfile=dist/cli.js --target=node --packages=external --format=esm && cp -r src/themes dist/themes && chmod +x dist/cli.js",
+    "build": "rm -rf dist && bun build src/cli.ts --outfile=dist/cli.js --target=node --packages=external --format=esm && mkdir -p dist/themes && cp src/themes/*.css dist/themes/ && chmod +x dist/cli.js",
     "prepublishOnly": "bun run build",
     "serve": "bun run src/cli.ts serve",
     "mcp": "bun run src/cli.ts mcp",
