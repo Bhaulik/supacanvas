@@ -703,48 +703,115 @@ export function renderLanding(): string {
       border: 1px solid var(--rule);
       color: var(--accent);
     }
-    .skill__grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 14px;
-    }
-    .skill__card {
-      background: var(--paper-tint);
-      border: 1px solid var(--rule);
-      border-radius: 10px;
-      padding: 20px 22px;
+    /* Accordion list — each tool is a clickable row that expands to show the command */
+    .skill__list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      min-width: 0;
-      transition: border-color 200ms var(--easing), transform 200ms var(--easing);
+      gap: 8px;
+      margin-bottom: 14px;
     }
-    .skill__card:hover {
+    .skill__row {
+      background: var(--paper-tint);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 200ms var(--easing), background 200ms var(--easing);
+    }
+    .skill__row:hover { border-color: var(--rule-strong); }
+    .skill__row[open] {
+      background: var(--paper);
       border-color: var(--rule-strong);
-      transform: translateY(-1px);
     }
-    .skill__card--featured {
-      background: linear-gradient(180deg, rgba(168, 53, 45, 0.06) 0%, var(--paper-tint) 80%);
-      border-color: var(--rule-strong);
-      position: relative;
+    .skill__row--featured {
+      background: linear-gradient(180deg, rgba(168, 53, 45, 0.05) 0%, var(--paper-tint) 80%);
+      border-left: 3px solid var(--accent);
     }
-    .skill__card--featured::before {
-      content: "FEATURED";
-      position: absolute;
-      top: -8px;
-      right: 14px;
+    .skill__row--featured[open] {
+      background: linear-gradient(180deg, rgba(168, 53, 45, 0.06) 0%, var(--paper) 80%);
+      border-color: var(--accent);
+      border-left-width: 3px;
+    }
+
+    .skill__summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      user-select: none;
+      flex-wrap: wrap;
+    }
+    .skill__summary::-webkit-details-marker { display: none; }
+    .skill__summary::after {
+      content: "+";
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 20px;
+      color: var(--accent);
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: transform 240ms var(--easing);
+    }
+    .skill__row[open] .skill__summary::after {
+      content: "−";
+      transform: rotate(180deg);
+    }
+
+    .skill__row__name {
+      font-family: var(--display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 22px;
+      line-height: 1;
+      color: var(--ink);
+      flex-shrink: 0;
+    }
+    .skill__row__where {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      flex-shrink: 0;
+      padding-top: 3px;
+    }
+    .skill__row__badge {
       font-family: var(--mono);
       font-size: 9px;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
       background: var(--accent);
       color: var(--paper);
       padding: 3px 8px;
       border-radius: 999px;
       font-weight: 500;
+      flex-shrink: 0;
     }
-    .skill__card--featured:hover { border-color: var(--accent); }
+
+    .skill__row__body {
+      padding: 0 18px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: skillExpand 240ms var(--easing);
+    }
+    .skill__row__hint {
+      font-size: 13px;
+      color: var(--ink-soft);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    @keyframes skillExpand {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     /* AGENTS.md universal — wide card spanning full width */
     .skill__universal {
@@ -852,11 +919,10 @@ export function renderLanding(): string {
     }
     .skill__manual a:hover { color: var(--accent); border-bottom-color: var(--accent); }
 
-    @media (max-width: 920px) {
-      .skill__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
     @media (max-width: 600px) {
-      .skill__grid { grid-template-columns: 1fr; }
+      .skill__summary { padding: 12px 14px; gap: 10px; }
+      .skill__row__name { font-size: 19px; }
+      .skill__row__body { padding: 0 14px 14px; }
     }
 
     /* ============================================================ CONNECT */
@@ -1440,30 +1506,33 @@ export function renderLanding(): string {
         <h2 class="skill__title">Drop in as a <em>skill</em></h2>
         <p class="skill__sub">One <code>curl</code> drops the supacanvas instructions into your AI's auto-loaded skills / rules folder. The agent picks it up on next launch and knows exactly when + how to make canvases. Pair with the MCP install below for full power.</p>
       </header>
-      <div class="skill__grid">
+      <div class="skill__list">
         ${(() => {
-          const cards = [
+          const rows = [
             // FEATURED — newer agents the user wants prominent
             { name: "openclaw", where: "~/.openclaw/skills/", featured: true, cmd: "mkdir -p ~/.openclaw/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.openclaw/skills/supacanvas/SKILL.md", hint: "Auto-loaded skill. Discoverable by every coding-agent OpenClaw spawns (Claude Code, Codex, opencode, Pi)." },
             { name: "Hermes Agent", where: "~/.hermes/skills/", featured: true, cmd: "mkdir -p ~/.hermes/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.hermes/skills/supacanvas/SKILL.md", hint: "Nous Research's self-improving agent. Becomes a slash command in the CLI on next start." },
             // POPULAR
             { name: "Claude Code", where: "~/.claude/skills/", cmd: "mkdir -p ~/.claude/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.claude/skills/supacanvas/SKILL.md", hint: "Global skill. Restart Claude Code after install." },
-            { name: "Cursor", where: ".cursor/rules/", cmd: "mkdir -p .cursor/rules && curl -fsSL https://supacanvas.com/skill.md > .cursor/rules/supacanvas.mdc", hint: "Project-level rule. Run from your repo root. Reopen Cursor." },
+            { name: "Cursor", where: ".cursor/rules/", cmd: "mkdir -p .cursor/rules && curl -fsSL https://supacanvas.com/skill.md > .cursor/rules/supacanvas.mdc", hint: "Project-level rule. Run from your repo root. Reopen Cursor to pick it up." },
             { name: "Windsurf", where: ".windsurf/rules/", cmd: "mkdir -p .windsurf/rules && curl -fsSL https://supacanvas.com/skill.md > .windsurf/rules/supacanvas.md", hint: "Cascade auto-applies to every prompt in this workspace." },
             { name: "Continue", where: "~/.continue/", cmd: "mkdir -p ~/.continue && curl -fsSL https://supacanvas.com/skill.md >> ~/.continue/system.md", hint: "Appended to your global Continue system prompt. Reload the extension." },
           ];
-          return cards.map((c) => `
-            <article class="skill__card${c.featured ? ' skill__card--featured' : ''}">
-              <div class="skill__card__head">
-                <h3 class="skill__card__name">${c.name}</h3>
-                <span class="skill__card__where">${c.where}</span>
+          return rows.map((r) => `
+            <details class="skill__row${r.featured ? ' skill__row--featured' : ''}">
+              <summary class="skill__summary">
+                <span class="skill__row__name">${r.name}</span>
+                <span class="skill__row__where">${r.where}</span>
+                ${r.featured ? '<span class="skill__row__badge">Featured</span>' : ''}
+              </summary>
+              <div class="skill__row__body">
+                <p class="skill__row__hint">${r.hint}</p>
+                <div class="snippet">
+                  <pre>${escapeForHtml(r.cmd)}</pre>
+                  <button class="snippet__btn" data-copy="${escapeForAttr(r.cmd)}" type="button">Copy</button>
+                </div>
               </div>
-              <div class="snippet">
-                <pre>${escapeForHtml(c.cmd)}</pre>
-                <button class="snippet__btn" data-copy="${escapeForAttr(c.cmd)}" type="button">Copy</button>
-              </div>
-              <p class="skill__card__hint">${c.hint}</p>
-            </article>
+            </details>
           `).join("");
         })()}
       </div>
