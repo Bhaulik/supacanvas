@@ -1,3 +1,5 @@
+<img width="813" height="308" alt="image" src="https://github.com/user-attachments/assets/49640409-8070-471b-bc1c-66f144dd97e0" />
+
 # Supacanvas
 
 > **The workspace for everything your AI tools build.** Every dashboard, mockup, and diagram your agents create — captured, searchable, exportable, and yours forever. Works with Claude, Cursor, and any AI tool that speaks MCP.
