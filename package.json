@@ -1,6 +1,6 @@
 {
   "name": "supacanvas",
-  "version": "0.7.9",
+  "version": "0.7.10",
   "description": "The workspace for every dashboard, mockup, and diagram your AI tools build. Captured, searchable, exportable, yours forever. Works with Claude, Cursor, and any AI tool that speaks MCP.",
   "type": "module",
   "license": "MIT",
@@ -23,14 +23,14 @@
   "homepage": "https://github.com/bhaulik/supacanvas",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bhaulik/supacanvas.git"
+    "url": "git+https://github.com/bhaulik/supacanvas.git"
   },
   "bugs": {
     "url": "https://github.com/bhaulik/supacanvas/issues"
   },
   "bin": {
-    "supacanvas": "./dist/cli.js",
-    "supa": "./dist/cli.js"
+    "supacanvas": "dist/cli.js",
+    "supa": "dist/cli.js"
   },
   "files": [
     "dist/",

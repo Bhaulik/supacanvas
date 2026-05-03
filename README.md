@@ -17,6 +17,8 @@ Under the hood:
 
 ## Install
 
+> ⚠️ **Always install with `-g` (global).** Supacanvas is a CLI — without `-g`, npm/bun drops it into the current directory's `node_modules/` and the `supacanvas` command won't be on your PATH (so MCP configs that reference `supacanvas` will fail to launch). If you accidentally ran `npm i supacanvas` without `-g`, run `npm uninstall supacanvas` in that directory and re-run with `-g`.
+
 **Plain npm** (works on Node ≥ 18 — no other runtime needed):
 
 ```sh
@@ -27,6 +29,13 @@ npm install -g supacanvas
 
 ```sh
 bun install -g supacanvas
+```
+
+**Try it without installing** (downloads + runs once, doesn't persist):
+
+```sh
+npx supacanvas serve     # via npm
+bunx supacanvas serve    # via bun
 ```
 
 **One-liner** (auto-installs Bun if missing, then supacanvas):
