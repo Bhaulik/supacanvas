@@ -18,6 +18,7 @@ import { renderCanvasDoc, escapeHtml } from "./render.ts";
 import { toMarkdown, toStandaloneHtml, toPrintHtml } from "./export.ts";
 import { screenshotCanvas, ChromeNotFoundError } from "./screenshot.ts";
 import { renderInstallPage } from "./install.ts";
+import { shareCanvas, revokeShare, listShares } from "./share.ts";
 import type { CanvasMeta, SnapshotInfo } from "./types.ts";
 
 export function buildApp() {
@@ -206,6 +207,40 @@ export function buildApp() {
     try {
       const result = await renameFolder(from, to);
       return c.json(result);
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400);
+    }
+  });
+
+  // ============================================================ Public sharing
+  // The browser never sees the owner token — it stays in
+  // ~/.supacanvas/share-tokens.json on this machine. The viewer drawer (and
+  // any future UI) calls these endpoints; the actual API call to the
+  // share-api Worker happens server-side.
+
+  app.post("/api/canvases/:id/share", async (c) => {
+    const id = c.req.param("id");
+    try {
+      const result = await shareCanvas(id);
+      return c.json(result, 201);
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 400);
+    }
+  });
+
+  app.get("/api/canvases/:id/shares", async (c) => {
+    const id = c.req.param("id");
+    const all = await listShares();
+    return c.json(all.filter((s) => s.canvasId === id));
+  });
+
+  app.post("/api/canvases/:id/unshare", async (c) => {
+    const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+    const slug = String(body.slug ?? "");
+    if (!slug) return c.json({ error: "slug required" }, 400);
+    try {
+      await revokeShare(slug);
+      return c.json({ ok: true, slug });
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400);
     }
@@ -847,7 +882,20 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
         <a href="/c/${encodeURIComponent(meta.id)}/screenshot.png" class="export-link" target="_blank" rel="noopener">PNG (Screenshot)</a>
         <a href="/c/${encodeURIComponent(meta.id)}/print" class="export-link" target="_blank" rel="noopener">PDF (Print sheet)</a>
       </div>
-      <div class="export-note">PDF opens the browser's print dialog — choose “Save as PDF.” PNG renders via headless Chrome (must be installed locally).</div>
+      <div class="export-note">PDF opens the browser's print dialog — choose "Save as PDF." PNG renders via headless Chrome (must be installed locally).</div>
+    </section>
+
+    <section class="dsec share-sec">
+      <div class="dsec-head">
+        <div class="eyebrow">Public link</div>
+        <span class="mono small muted" id="share-count"></span>
+      </div>
+      <button id="share-create" class="share-btn" type="button">
+        <span class="share-btn__title">Share publicly</span>
+        <span class="share-btn__sub">Anyone with the URL can view this canvas</span>
+      </button>
+      <div id="share-list" class="share-list"></div>
+      <div class="export-note share-note">Owner tokens stay in <code>~/.supacanvas/share-tokens.json</code>. Hosted free at supacanvas.com — no account, no card, capped at 50/day per IP.</div>
     </section>
 
     <section class="dsec">
@@ -1137,6 +1185,90 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   .export-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
   .export-note { font-size: 13px; line-height: 1.55; color: var(--muted); padding-top: 10px; }
 
+  /* ----- Public sharing ----- */
+  .share-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: background 120ms ease, transform 80ms ease;
+  }
+  .share-btn:hover { background: var(--accent); border-color: var(--accent); }
+  .share-btn:active { transform: translateY(1px); }
+  .share-btn[disabled] { opacity: 0.6; cursor: progress; }
+  .share-btn__title { font-family: var(--display); font-style: italic; font-size: 17px; line-height: 1.2; }
+  .share-btn__sub { font-size: 12px; color: rgba(245, 240, 230, 0.72); line-height: 1.3; }
+
+  .share-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .share-list:empty { margin-top: 0; }
+  .share-card {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 10px 12px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .share-card__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .share-card__url {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    background: var(--paper-2);
+    padding: 5px 8px;
+    border-radius: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  .share-card__url:hover { color: var(--accent); border-color: var(--accent); }
+  .share-card__btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 9px;
+    border: 1px solid var(--rule-strong, #b9aa86);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .share-card__btn:hover { border-color: var(--ink); color: var(--ink); }
+  .share-card__btn.copied { border-color: var(--accent); color: var(--accent); }
+  .share-card__btn--danger:hover { border-color: var(--accent); color: var(--accent); }
+  .share-card__meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .share-note { padding-top: 10px; }
+
   .catalog { font-size: 14px; color: var(--ink-2); cursor: copy; }
   .catalog:hover { color: var(--accent); }
   .catalog[data-copied] { color: var(--accent); }
@@ -1358,6 +1490,107 @@ function viewerHtml(meta: CanvasMeta, themes: string[], versions: SnapshotInfo[]
   catalog?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(catalog.textContent); catalog.dataset.copied = '1'; setTimeout(() => delete catalog.dataset.copied, 900); } catch {}
   });
+
+  // ----- Public sharing -----
+  const shareCreate = document.getElementById('share-create');
+  const shareList = document.getElementById('share-list');
+  const shareCount = document.getElementById('share-count');
+
+  function escapeHtmlBrowser(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function renderShareCard(s) {
+    const url = s.liveUrl || s.canonicalUrl;
+    const safeUrl = escapeHtmlBrowser(url);
+    const safeSlug = escapeHtmlBrowser(s.slug);
+    const created = new Date(s.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const views = (typeof s.viewCount === 'number') ? ('views~' + s.viewCount) : 'views ?';
+    const status = s.exists === false ? 'revoked' : 'live';
+    return [
+      '<div class="share-card" data-slug="' + safeSlug + '">',
+      '  <div class="share-card__row">',
+      '    <a class="share-card__url" href="' + safeUrl + '" target="_blank" rel="noreferrer noopener" title="' + safeUrl + '">' + safeUrl + '</a>',
+      '    <button class="share-card__btn" data-act="copy">Copy</button>',
+      '    <button class="share-card__btn share-card__btn--danger" data-act="revoke">Revoke</button>',
+      '  </div>',
+      '  <div class="share-card__meta">',
+      '    <span>' + safeSlug + ' · ' + status + '</span>',
+      '    <span>' + views + ' · ' + created + '</span>',
+      '  </div>',
+      '</div>'
+    ].join('');
+  }
+
+  function renderShareList(items) {
+    if (!items || items.length === 0) {
+      shareList.innerHTML = '';
+      shareCount.textContent = '';
+      return;
+    }
+    shareList.innerHTML = items.map(renderShareCard).join('');
+    shareCount.textContent = items.length === 1 ? '1 link' : items.length + ' links';
+    shareList.querySelectorAll('.share-card').forEach((card) => {
+      const slug = card.dataset.slug;
+      const url = card.querySelector('.share-card__url')?.href;
+      card.querySelector('[data-act="copy"]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        try {
+          await navigator.clipboard.writeText(url);
+          btn.classList.add('copied');
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1200);
+        } catch {}
+      });
+      card.querySelector('[data-act="revoke"]')?.addEventListener('click', async (e) => {
+        if (!confirm('Revoke this share? The URL will return 410 Gone immediately.')) return;
+        const btn = e.currentTarget;
+        btn.disabled = true; btn.textContent = '…';
+        const res = await fetch('/api/canvases/' + encodeURIComponent(id) + '/unshare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug }),
+        });
+        if (res.ok) {
+          await loadShares();
+        } else {
+          alert('Revoke failed: ' + (await res.text()));
+          btn.disabled = false; btn.textContent = 'Revoke';
+        }
+      });
+    });
+  }
+
+  async function loadShares() {
+    try {
+      const res = await fetch('/api/canvases/' + encodeURIComponent(id) + '/shares');
+      if (!res.ok) return;
+      const items = await res.json();
+      renderShareList(items);
+    } catch {}
+  }
+
+  shareCreate?.addEventListener('click', async () => {
+    if (!confirm('Create a public URL for this canvas? Anyone with the link will be able to view it.')) return;
+    shareCreate.disabled = true;
+    const originalTitle = shareCreate.querySelector('.share-btn__title').textContent;
+    shareCreate.querySelector('.share-btn__title').textContent = 'Uploading…';
+    try {
+      const res = await fetch('/api/canvases/' + encodeURIComponent(id) + '/share', { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || ('HTTP ' + res.status));
+      }
+      await loadShares();
+    } catch (e) {
+      alert('Share failed: ' + e.message);
+    } finally {
+      shareCreate.disabled = false;
+      shareCreate.querySelector('.share-btn__title').textContent = originalTitle;
+    }
+  });
+
+  loadShares();
 </script>`;
   return pageShell(meta.title + " — Supacanvas", body);
 }
