@@ -450,12 +450,12 @@ export function renderLanding(): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Supacanvas — understand what your agents are doing</title>
-  <meta name="description" content="Understand what your Agents are doing — visually, easily. A local-first MCP server + viewer for the canvases your AI tools build.">
+  <title>Supacanvas — the visual interface layer for AI agents</title>
+  <meta name="description" content="The visual interface layer for AI agents. Local-first MCP server + viewer for the dashboards, mockups, diagrams, and prototypes your AI tools build. Yours forever.">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Supacanvas">
-  <meta property="og:description" content="Understand what your Agents are doing — visually, easily.">
+  <meta property="og:title" content="Supacanvas — the visual interface layer for AI agents">
+  <meta property="og:description" content="Local-first MCP server for the canvases your AI tools build. Yours on disk, exportable, MIT.">
   <meta property="og:url" content="https://supacanvas.com">
 
   <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM-friendly spec">
@@ -600,6 +600,8 @@ export function renderLanding(): string {
       border-radius: 8px;
       overflow: hidden;
       max-width: 100%;
+      width: max-content;
+      min-width: 0;
       font-family: var(--mono);
       font-size: 14px;
       box-shadow: 0 1px 0 rgba(26, 22, 20, 0.08), 0 12px 28px -12px rgba(26, 22, 20, 0.22);
@@ -614,6 +616,9 @@ export function renderLanding(): string {
       letter-spacing: 0.02em;
       white-space: pre;
       overflow-x: auto;
+      min-width: 0;
+      flex: 1 1 auto;
+      -webkit-overflow-scrolling: touch;
     }
     .install__cmd::before { content: "$ "; opacity: 0.45; }
     .install__btn {
@@ -700,8 +705,9 @@ export function renderLanding(): string {
     }
     .skill__grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
+      margin-bottom: 14px;
     }
     .skill__card {
       background: var(--paper-tint);
@@ -711,11 +717,89 @@ export function renderLanding(): string {
       display: flex;
       flex-direction: column;
       gap: 12px;
+      min-width: 0;
       transition: border-color 200ms var(--easing), transform 200ms var(--easing);
     }
     .skill__card:hover {
       border-color: var(--rule-strong);
       transform: translateY(-1px);
+    }
+    .skill__card--featured {
+      background: linear-gradient(180deg, rgba(168, 53, 45, 0.06) 0%, var(--paper-tint) 80%);
+      border-color: var(--rule-strong);
+      position: relative;
+    }
+    .skill__card--featured::before {
+      content: "FEATURED";
+      position: absolute;
+      top: -8px;
+      right: 14px;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: var(--paper);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+    .skill__card--featured:hover { border-color: var(--accent); }
+
+    /* AGENTS.md universal — wide card spanning full width */
+    .skill__universal {
+      background: var(--paper);
+      border: 1px dashed var(--rule-strong);
+      border-radius: 10px;
+      padding: 22px 24px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+    .skill__universal__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .skill__universal__name {
+      font-family: var(--display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 22px;
+      line-height: 1;
+      margin: 0;
+      color: var(--ink);
+    }
+    .skill__universal__badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 999px;
+      background: var(--accent-soft);
+      white-space: nowrap;
+    }
+    .skill__universal__hint {
+      font-size: 13px;
+      color: var(--ink-soft);
+      margin: 0;
+      line-height: 1.5;
+    }
+    .skill__universal__hint strong { color: var(--ink); font-weight: 500; }
+    .skill__universal__tools {
+      display: block;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.02em;
+      color: var(--ink-faint);
+      margin-top: 6px;
+      overflow-wrap: anywhere;
     }
     .skill__card__head {
       display: flex;
@@ -768,7 +852,10 @@ export function renderLanding(): string {
     }
     .skill__manual a:hover { color: var(--accent); border-bottom-color: var(--accent); }
 
-    @media (max-width: 760px) {
+    @media (max-width: 920px) {
+      .skill__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 600px) {
       .skill__grid { grid-template-columns: 1fr; }
     }
 
@@ -917,6 +1004,7 @@ export function renderLanding(): string {
       color: var(--ink-soft);
       margin: 0;
       line-height: 1.7;
+      overflow-wrap: anywhere;
     }
     .universal__list span {
       font-family: var(--mono);
@@ -924,6 +1012,7 @@ export function renderLanding(): string {
       letter-spacing: 0.02em;
       color: var(--ink-faint);
       white-space: nowrap;
+      display: inline-block;
     }
     .universal__list code {
       font-family: var(--mono);
@@ -942,6 +1031,8 @@ export function renderLanding(): string {
       border-radius: 5px;
       overflow: hidden;
       font-family: var(--mono);
+      min-width: 0;
+      max-width: 100%;
     }
     .snippet pre {
       margin: 0;
@@ -951,6 +1042,8 @@ export function renderLanding(): string {
       overflow-x: auto;
       white-space: pre;
       color: var(--paper);
+      min-width: 0;
+      -webkit-overflow-scrolling: touch;
     }
     .snippet__btn {
       position: absolute;
@@ -1062,6 +1155,7 @@ export function renderLanding(): string {
       margin: 0;
       padding-top: 16px;
       border-top: 1px solid rgba(245, 240, 230, 0.1);
+      overflow-wrap: anywhere;
     }
     .agent__how strong { color: var(--paper); font-weight: 500; }
 
@@ -1238,15 +1332,66 @@ export function renderLanding(): string {
     .foot__sep { color: var(--rule-strong); margin: 0 4px; }
 
     /* ============================================================ RESPONSIVE */
-    @media (max-width: 720px) {
-      .page { padding: 22px 22px 48px; }
-      .top { padding-bottom: 40px; }
-      .hero { padding: 8px 0 56px; }
+    /* Tablet — single-column grids, slightly smaller paddings */
+    @media (max-width: 760px) {
       .featured { grid-template-columns: 1fr; }
       .secondary { grid-template-columns: 1fr; }
-      .install { font-size: 13px; }
-      .install__cmd { padding: 14px 16px 14px 18px; }
-      .install__btn { padding: 0 16px; }
+      .skill__grid { grid-template-columns: 1fr; }
+      .security__grid { grid-template-columns: 1fr; }
+    }
+
+    /* Phone — significant size + padding reduction */
+    @media (max-width: 720px) {
+      .page { padding: 22px 18px 48px; max-width: 100%; }
+      .top { padding-bottom: 32px; gap: 12px; flex-wrap: wrap; }
+      .top__brand { font-size: 10px; }
+      .top__brand em { font-size: 12px; }
+      .top__links { gap: 14px; }
+      .hero { padding: 8px 0 48px; }
+      .install { font-size: 12px; max-width: 100%; }
+      .install__cmd { padding: 14px 12px 14px 16px; }
+      .install__btn { padding: 0 14px; font-size: 10px; letter-spacing: 0.10em; }
+      .install__hint { font-size: 11px; max-width: 40ch; }
+      .meta { font-size: 9px; }
+      .meta span { padding: 0 6px; }
+      .skill { padding-top: 36px; margin-top: 28px; }
+      .skill__card { padding: 18px 18px; }
+      .connect, .agent, .security, .trouble { margin-top: 36px; }
+      .connect { padding-top: 36px; }
+      .agent { padding: 24px 22px 22px; }
+      .agent__title { font-size: 24px; }
+      .agent__lede { font-size: 15px; }
+      .universal { padding: 18px 18px 20px; }
+      .universal__name { font-size: 19px; }
+      .card { padding: 18px 18px 18px; }
+      .card__name { font-size: 22px; }
+      .cta { padding: 11px 18px; font-size: 12px; }
+      .snippet pre { font-size: 11px; padding: 12px 60px 12px 12px; }
+      .snippet__btn { font-size: 9px; padding: 4px 9px; top: 6px; right: 6px; }
+      .foot { margin-top: 56px; padding: 20px 0 0; line-height: 1.8; }
+    }
+
+    /* Very small phones (< 380px) — squeeze further */
+    @media (max-width: 380px) {
+      .page { padding: 20px 14px 40px; }
+      .install { width: 100%; }
+      .install__cmd { font-size: 11px; padding: 12px 10px 12px 14px; }
+      .install__btn { padding: 0 12px; }
+      .hero__title { font-size: 60px !important; }
+      .hero__lede { font-size: 19px; }
+      .hero__sub { font-size: 14px; }
+      .skill__card { padding: 16px 16px; }
+      .skill__card__name { font-size: 19px; }
+      .agent { padding: 20px 18px 20px; }
+      .card { padding: 16px 16px; }
+      .universal { padding: 16px 16px 18px; }
+      .universal__list { font-size: 12px; }
+      .snippet pre { font-size: 10.5px; padding: 11px 56px 11px 11px; }
+    }
+
+    /* Touch-friendly tap targets on coarse pointers */
+    @media (pointer: coarse) {
+      .snippet__btn, .install__btn, .skill__card .snippet__btn { min-height: 32px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1274,7 +1419,7 @@ export function renderLanding(): string {
         <span class="wordmark__supa">Supa</span><span class="wordmark__canvas">canvas</span>
       </h1>
 
-      <p class="tagline">Understand what your <strong>Agents</strong> are doing — <em>visually, easily.</em></p>
+      <p class="tagline">The visual interface layer for <em>AI agents</em>.</p>
 
       <div class="install" role="group" aria-label="Install command">
         <span class="install__cmd">${INSTALL_CMD}</span>
@@ -1297,15 +1442,18 @@ export function renderLanding(): string {
       </header>
       <div class="skill__grid">
         ${(() => {
-          const ccCmd = "mkdir -p ~/.claude/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.claude/skills/supacanvas/SKILL.md";
-          const cursorCmd = "mkdir -p .cursor/rules && curl -fsSL https://supacanvas.com/skill.md > .cursor/rules/supacanvas.mdc";
-          const continueCmd = "mkdir -p ~/.continue && curl -fsSL https://supacanvas.com/skill.md >> ~/.continue/system.md";
-          return [
-            { name: "Claude Code", where: "~/.claude/skills/", cmd: ccCmd, hint: "Auto-loaded global skill. Restart Claude Code after installing." },
-            { name: "Cursor", where: ".cursor/rules/", cmd: cursorCmd, hint: "Project-level rule. Run from your repo root. Reopen Cursor to pick it up." },
-            { name: "Continue", where: "~/.continue/", cmd: continueCmd, hint: "Appends to your global system prompt. Reload the Continue extension." },
-          ].map((c) => `
-            <article class="skill__card">
+          const cards = [
+            // FEATURED — newer agents the user wants prominent
+            { name: "openclaw", where: "~/.openclaw/skills/", featured: true, cmd: "mkdir -p ~/.openclaw/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.openclaw/skills/supacanvas/SKILL.md", hint: "Auto-loaded skill. Discoverable by every coding-agent OpenClaw spawns (Claude Code, Codex, opencode, Pi)." },
+            { name: "Hermes Agent", where: "~/.hermes/skills/", featured: true, cmd: "mkdir -p ~/.hermes/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.hermes/skills/supacanvas/SKILL.md", hint: "Nous Research's self-improving agent. Becomes a slash command in the CLI on next start." },
+            // POPULAR
+            { name: "Claude Code", where: "~/.claude/skills/", cmd: "mkdir -p ~/.claude/skills/supacanvas && curl -fsSL https://supacanvas.com/skill.md > ~/.claude/skills/supacanvas/SKILL.md", hint: "Global skill. Restart Claude Code after install." },
+            { name: "Cursor", where: ".cursor/rules/", cmd: "mkdir -p .cursor/rules && curl -fsSL https://supacanvas.com/skill.md > .cursor/rules/supacanvas.mdc", hint: "Project-level rule. Run from your repo root. Reopen Cursor." },
+            { name: "Windsurf", where: ".windsurf/rules/", cmd: "mkdir -p .windsurf/rules && curl -fsSL https://supacanvas.com/skill.md > .windsurf/rules/supacanvas.md", hint: "Cascade auto-applies to every prompt in this workspace." },
+            { name: "Continue", where: "~/.continue/", cmd: "mkdir -p ~/.continue && curl -fsSL https://supacanvas.com/skill.md >> ~/.continue/system.md", hint: "Appended to your global Continue system prompt. Reload the extension." },
+          ];
+          return cards.map((c) => `
+            <article class="skill__card${c.featured ? ' skill__card--featured' : ''}">
               <div class="skill__card__head">
                 <h3 class="skill__card__name">${c.name}</h3>
                 <span class="skill__card__where">${c.where}</span>
@@ -1319,8 +1467,25 @@ export function renderLanding(): string {
           `).join("");
         })()}
       </div>
+
+      <article class="skill__universal">
+        <div class="skill__universal__head">
+          <h3 class="skill__universal__name">AGENTS.md (one file, ~10+ tools)</h3>
+          <span class="skill__universal__badge">Open standard</span>
+        </div>
+        <p class="skill__universal__hint">
+          AGENTS.md is the open convention donated to the Linux Foundation in late 2025. <strong>One file at your project root</strong> auto-applies to:
+          <span class="skill__universal__tools">Codex · opencode · Aider · Goose · Zed · Factory · Warp · Jules · VS Code Copilot Chat · Devi · 20,000+ repos</span>
+        </p>
+        <div class="snippet">
+          <pre>curl -fsSL https://supacanvas.com/skill.md &gt; AGENTS.md</pre>
+          <button class="snippet__btn" data-copy="curl -fsSL https://supacanvas.com/skill.md > AGENTS.md" type="button">Copy</button>
+        </div>
+        <p class="skill__card__hint" style="margin-top: 6px;">Run from your project root. Every agent in the AGENTS.md ecosystem reads it on the next session.</p>
+      </article>
+
       <p class="skill__manual">
-        Other tools (Claude Desktop, ChatGPT custom instructions, Codex CLI, opencode, etc.) — paste the contents of <a href="/skill.md">supacanvas.com/skill.md</a> into your tool's rules / system-prompt slot.
+        Other tools (Claude Desktop, ChatGPT custom instructions, Cline, JetBrains AI, etc.) — paste the contents of <a href="/skill.md">supacanvas.com/skill.md</a> into the tool's rules / system-prompt slot.
       </p>
     </section>
 
