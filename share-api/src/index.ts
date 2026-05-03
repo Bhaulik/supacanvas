@@ -18,6 +18,7 @@ import {
 import {
   renderGone,
   renderLanding,
+  renderLlmsTxt,
   renderNotFound,
   renderUseCases,
   renderViewer,
@@ -283,6 +284,28 @@ app.get("/uses", (c) => {
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "public, max-age=600",
+    },
+  });
+});
+
+// ============================================================ GET /llms.txt (machine-readable spec for agents/crawlers)
+app.get("/llms.txt", (c) => {
+  return new Response(renderLlmsTxt(), {
+    headers: {
+      "content-type": "text/markdown; charset=utf-8",
+      "cache-control": "public, max-age=600",
+      "access-control-allow-origin": "*",
+    },
+  });
+});
+
+// /.well-known/llms.txt — formal well-known path mirroring the same content
+app.get("/.well-known/llms.txt", (c) => {
+  return new Response(renderLlmsTxt(), {
+    headers: {
+      "content-type": "text/markdown; charset=utf-8",
+      "cache-control": "public, max-age=600",
+      "access-control-allow-origin": "*",
     },
   });
 });

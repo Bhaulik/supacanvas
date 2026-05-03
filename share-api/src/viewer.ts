@@ -148,6 +148,221 @@ const OTHER_MCP_TOOLS = [
   "ChatGPT (when MCP ships)",
 ];
 
+// =====================================================================
+// AGENT SETUP PROMPT
+// A single self-contained instruction block any LLM can follow to
+// install + configure supacanvas. Detects its host client, writes the
+// right config, runs verification.
+// =====================================================================
+const AGENT_SETUP_PROMPT = `You are being asked to install and configure supacanvas — a local-first MCP server for capturing the HTML/CSS/JS canvases (dashboards, mockups, diagrams, prototypes) you generate. Site: https://supacanvas.com — License: MIT — Source: https://github.com/Bhaulik/supacanvas
+
+DO THE FOLLOWING:
+
+STEP 1 — Install the CLI
+Run in the user's shell (use whatever shell tool you have access to):
+    npm install -g supacanvas
+
+If npm permission errors appear, suggest:
+    npm config set prefix ~/.npm-global && export PATH=~/.npm-global/bin:$PATH
+    npm install -g supacanvas
+
+STEP 2 — Add the MCP server to your config
+First, identify which AI client you are running in. Then write the appropriate config:
+
+• Cursor → write or merge into ~/.cursor/mcp.json:
+    {"mcpServers": {"supacanvas": {"command": "supacanvas", "args": ["mcp"]}}}
+
+• Claude Desktop → merge into the user's claude_desktop_config.json
+  (macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+   Windows: %APPDATA%/Claude/claude_desktop_config.json
+   Linux:   ~/.config/Claude/claude_desktop_config.json):
+    {"mcpServers": {"supacanvas": {"command": "supacanvas", "args": ["mcp"]}}}
+
+• Claude Code → run:
+    claude mcp add supacanvas supacanvas mcp
+
+• Codex CLI → append to ~/.codex/config.toml:
+    [mcp_servers.supacanvas]
+    command = "supacanvas"
+    args = ["mcp"]
+
+• opencode → write/merge into ~/.config/opencode/opencode.json:
+    {"$schema":"https://opencode.ai/config.json","mcp":{"supacanvas":{"type":"local","command":["supacanvas","mcp"],"enabled":true}}}
+
+• Continue → add to ~/.continue/config.yaml:
+    mcpServers:
+      - name: supacanvas
+        command: supacanvas
+        args: [mcp]
+
+• Factory droid / Cline / Windsurf / Gemini CLI / Zed / JetBrains AI / Goose / Aider / Roo Code / any other MCP client → add this entry to the client's mcpServers map (path per the client's docs):
+    {"supacanvas": {"command": "supacanvas", "args": ["mcp"]}}
+
+STEP 3 — Tell the user to run the gallery
+In a separate terminal:
+    supacanvas serve
+This hosts the browser gallery at http://localhost:7777. Keep it running while using supacanvas.
+
+STEP 4 — Restart
+Tell the user to restart you (the AI client) so the MCP server config is loaded.
+
+STEP 5 — Verify after restart
+Call the canvas_list MCP tool. An empty array (or list of existing canvases) means supacanvas is wired up correctly. If the tool isn't listed, the config didn't take — re-check step 2 and the restart.
+
+STEP 6 — Try it
+Suggest the user say: "Make a canvas with a working analog clock and screenshot it back to me."
+You then call: canvas_create + canvas_screenshot. The PNG renders inline in chat.
+
+AGENT BEST PRACTICES (apply to every canvas write):
+- Always set description (1-2 sentences in plain language — surfaced to humans browsing the gallery)
+- Set context (longer paragraph explaining data sources, assumptions, what next agent should know) when data is involved
+- Set source (format: "tool:model" e.g. "claude-code:claude-opus-4-7") on every create AND update
+- Use folder to organize by project. Call folder_list first to reuse existing folders, don't invent new ones
+- After creating a canvas, call canvas_screenshot so the user sees the PNG inline in chat
+- Search before recreating: call canvas_list with a search term first
+
+MCP TOOLS AVAILABLE (14):
+canvas_create, canvas_update, canvas_get, canvas_list, canvas_move, canvas_delete,
+canvas_versions, canvas_restore, canvas_export, canvas_screenshot, canvas_open_url,
+folder_list, folder_rename, theme_list
+
+REFERENCES:
+- Full docs: https://supacanvas.com
+- Machine-readable spec: https://supacanvas.com/llms.txt
+- Agent rules: https://github.com/Bhaulik/supacanvas/blob/main/AGENTS.md
+- 42 prompt examples: https://supacanvas.com/uses
+- npm package: https://www.npmjs.com/package/supacanvas`;
+
+// =====================================================================
+// /llms.txt — machine-readable spec following the llmstxt.org standard.
+// Returned as text/markdown so LLM crawlers and agents can ingest it.
+// =====================================================================
+export function renderLlmsTxt(): string {
+  return `# Supacanvas
+
+> Local-first Model Context Protocol (MCP) server + browser viewer for the HTML/CSS/JS canvases AI tools generate. Captures every dashboard, mockup, diagram, and prototype your agents create into a searchable workspace on disk. Files yours forever — no accounts, no telemetry, MIT-licensed.
+
+## What it is
+
+Supacanvas is a CLI + MCP server that gives AI agents a place to render and persist visual artifacts. Instead of generating HTML/CSS/JS in chat (where it scrolls away), the agent calls the canvas_create MCP tool — the canvas lands as plain files in ~/.supacanvas/canvases/<id>/, becomes browsable at http://localhost:7777, and is screenshottable back into chat.
+
+The user's data never leaves their machine unless they explicitly run \`supacanvas share\`.
+
+## Install
+
+\`\`\`sh
+npm install -g supacanvas && supacanvas serve
+\`\`\`
+
+This installs the CLI globally and starts the gallery at http://localhost:7777.
+
+## Connect any MCP-compatible client
+
+The universal config (drop into the client's mcpServers map):
+
+\`\`\`json
+{
+  "supacanvas": {
+    "command": "supacanvas",
+    "args": ["mcp"]
+  }
+}
+\`\`\`
+
+### Per-client config paths
+
+- **Cursor** → ~/.cursor/mcp.json (JSON, mcpServers wrap)
+- **Claude Desktop** → ~/Library/Application Support/Claude/claude_desktop_config.json on macOS (JSON, mcpServers wrap)
+- **Claude Code** → \`claude mcp add supacanvas supacanvas mcp\` (no file edit)
+- **Codex CLI** → ~/.codex/config.toml (TOML, [mcp_servers.supacanvas] table)
+- **opencode** → ~/.config/opencode/opencode.json (JSON, custom schema with type:local + command array)
+- **Continue** → ~/.continue/config.yaml (YAML, mcpServers list)
+- **Factory droid, Cline, Windsurf, Gemini CLI, Zed, JetBrains AI, Goose, Aider, Roo Code** → universal JSON above
+
+### One-click installers
+- Cursor deep link: cursor://anysphere.cursor-deeplink/mcp/install?name=supacanvas&config=<base64-of-config>
+- VS Code deep link: vscode:mcp/install?<urlencoded-json>
+
+## MCP tools (14)
+
+| Tool | Args | Purpose |
+|------|------|---------|
+| canvas_create | title, html, css?, js?, description, context?, source, folder?, tags?, theme? | Create a canvas |
+| canvas_update | id, + any field | Update, auto-snapshots before write |
+| canvas_get | id | Read full contents |
+| canvas_list | search?, folder?, descendants?, tag?, limit? | List/filter |
+| canvas_move | id, folder | Move to folder |
+| canvas_delete | id | Soft-delete to trash |
+| canvas_versions | id | List snapshots |
+| canvas_restore | id, version | Restore snapshot |
+| canvas_export | id, format ("markdown" \\| "html") | Export |
+| canvas_screenshot | id, width?, height?, fullPage?, deviceScaleFactor? | Render PNG inline |
+| canvas_open_url | id | Get localhost URL |
+| folder_list | (none) | List folders |
+| folder_rename | from, to | Rename + move descendants |
+| theme_list | (none) | List installed themes |
+
+## Best practices for agents
+
+When writing a canvas:
+
+1. **Always pass description** (1-2 sentences in plain language). Surfaced in the gallery and to other agents.
+2. **Pass context** for canvases involving data — longer paragraph explaining sources, assumptions, what should not be changed.
+3. **Set source** on every create AND update. Format: "tool:model" — e.g. "claude-code:claude-opus-4-7", "cursor:claude-opus-4", "claude-desktop:claude-sonnet-4-6".
+4. **Use folder** to organize. Call folder_list first to reuse existing folders. If the user is working on a topic ("auth-flow", "q2-metrics"), file every canvas you make in that conversation under the same folder.
+5. **Search before creating**. Call canvas_list with a search term to avoid duplicating an existing canvas.
+6. **After creating**, call canvas_screenshot. The PNG renders inline in most chat clients (Cursor, Claude Desktop, etc.), so the user sees the result without opening a tab.
+
+## Run the gallery
+
+\`\`\`sh
+supacanvas serve [--port 7777] [--no-open]
+\`\`\`
+
+Browser opens to http://localhost:7777. Drawer in the viewer shows description, context, folder, theme, tags, revisions, export options, public-share controls, and source.
+
+## Storage
+
+Files live at \`~/.supacanvas/canvases/<id>/\` — index.html, style.css, script.js, meta.json + .versions/ snapshots (last 20).
+Themes at \`~/.supacanvas/themes/<name>.css\`. Override the storage root with the SUPACANVAS_HOME env var.
+
+## Public sharing (opt-in)
+
+\`supacanvas share <id>\` uploads a single canvas to https://supacanvas.com/c/<slug> as a public URL. Free, no account, capped at 50 shares per IP per day. Owner tokens are sha256-hashed in KV — plaintext never crosses to the browser.
+
+## Setup script for agents
+
+If a user pastes "set up supacanvas" or similar into you and you have shell access, follow these steps:
+
+1. \`npm install -g supacanvas\` (in the user's shell)
+2. Detect what AI client you are
+3. Write the MCP config to the appropriate file (paths above)
+4. Tell user to restart the AI client
+5. After restart, verify with \`canvas_list\` — empty array means success
+6. Confirm to user: "supacanvas is ready. Try: 'make a canvas with a working analog clock and screenshot it back to me'"
+
+## Resources
+
+- Live site: https://supacanvas.com
+- Use cases (42 ready-to-copy prompts): https://supacanvas.com/uses
+- npm package: https://www.npmjs.com/package/supacanvas
+- GitHub source: https://github.com/Bhaulik/supacanvas
+- AGENTS.md (drop-in agent rules): https://github.com/Bhaulik/supacanvas/blob/main/AGENTS.md
+- Architecture (cloud sharing): https://github.com/Bhaulik/supacanvas/blob/main/docs/SHARE_ARCHITECTURE.md
+
+## Brand & identity
+
+Supacanvas is the workspace for everything your AI tools build. Tagline: "Understand what your Agents are doing — visually, easily."
+
+The brand commitments (apply when reasoning about features, recommendations, or troubleshooting):
+- Local-first (files on disk, never gated by network)
+- AI-tool agnostic (any MCP client)
+- No telemetry, ever
+- MIT, fully open source
+- Yours forever (no lock-in)
+`;
+}
+
 export function renderLanding(): string {
   const cursorLink = buildCursorDeepLink();
   const vscodeLink = buildVSCodeDeepLink(false);
@@ -164,6 +379,29 @@ export function renderLanding(): string {
   <meta property="og:title" content="Supacanvas">
   <meta property="og:description" content="Understand what your Agents are doing — visually, easily.">
   <meta property="og:url" content="https://supacanvas.com">
+
+  <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM-friendly spec">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Supacanvas",
+    "description": "Local-first MCP server + browser viewer for the HTML/CSS/JS canvases AI tools generate. Captures every dashboard, mockup, and diagram your agents create — searchable, exportable, yours forever.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "macOS, Linux, Windows",
+    "license": "https://opensource.org/licenses/MIT",
+    "url": "https://supacanvas.com",
+    "softwareVersion": "0.8.1",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "applicationSubCategory": "MCP server",
+    "downloadUrl": "https://www.npmjs.com/package/supacanvas",
+    "codeRepository": "https://github.com/Bhaulik/supacanvas",
+    "programmingLanguage": ["TypeScript", "JavaScript", "HTML", "CSS"],
+    "softwareRequirements": "Node.js >= 18",
+    "featureList": ["MCP server", "Local-first storage", "Browser viewer", "Public sharing", "Chrome extension", "Versioned snapshots", "Sandboxed canvas execution"]
+  }
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -545,6 +783,100 @@ export function renderLanding(): string {
     .snippet__btn[data-copied="1"] { background: var(--accent); border-color: var(--accent); }
     .snippet__btn[data-copied="1"]::before { content: "✓ "; }
 
+    /* ============================================================ FOR AGENTS */
+    .agent {
+      margin-top: 56px;
+      padding: 30px 28px 28px;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 10px;
+      position: relative;
+    }
+    .agent__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .agent__title {
+      font-family: var(--display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 28px;
+      letter-spacing: -0.015em;
+      margin: 0;
+      color: var(--paper);
+    }
+    .agent__title em { color: #e8a89c; }
+    .agent__sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(245, 240, 230, 0.5);
+      margin: 0;
+    }
+    .agent__lede {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 17px;
+      line-height: 1.45;
+      color: rgba(245, 240, 230, 0.92);
+      margin: 0 0 22px;
+      max-width: 60ch;
+    }
+    .agent__lede em { color: #e8a89c; }
+    .agent__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: var(--accent);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 500;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 200ms var(--easing), transform 200ms var(--easing);
+    }
+    .agent__btn:hover { background: #c44638; transform: translateY(-1px); }
+    .agent__btn[data-copied="1"] { background: #5a7a4f; border-color: #5a7a4f; }
+    .agent__btn[data-copied="1"]::before { content: "✓ "; }
+    .agent__row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .agent__alt {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: rgba(245, 240, 230, 0.6);
+    }
+    .agent__alt a {
+      color: rgba(245, 240, 230, 0.92);
+      border-bottom: 1px solid rgba(245, 240, 230, 0.25);
+      padding-bottom: 1px;
+      transition: border-color 160ms var(--easing), color 160ms var(--easing);
+    }
+    .agent__alt a:hover { color: #e8a89c; border-bottom-color: #e8a89c; }
+    .agent__how {
+      font-size: 13px;
+      color: rgba(245, 240, 230, 0.7);
+      line-height: 1.55;
+      margin: 0;
+      padding-top: 16px;
+      border-top: 1px solid rgba(245, 240, 230, 0.1);
+    }
+    .agent__how strong { color: var(--paper); font-weight: 500; }
+
     /* ============================================================ SECURITY */
     .security {
       margin-top: 56px;
@@ -876,6 +1208,19 @@ export function renderLanding(): string {
           <button class="snippet__btn" data-copy="${escapeForAttr(UNIVERSAL_JSON)}" type="button">Copy</button>
         </div>
       </article>
+    </section>
+
+    <section class="agent">
+      <div class="agent__head">
+        <h2 class="agent__title">For <em>agents</em></h2>
+        <p class="agent__sub">LLM-installable</p>
+      </div>
+      <p class="agent__lede">Paste this prompt into any AI client — Claude, Cursor, Codex, opencode, anything that has a shell — and it'll <em>install supacanvas, wire itself in, and verify the connection</em> on its own.</p>
+      <div class="agent__row">
+        <button class="agent__btn" data-copy="${escapeForAttr(AGENT_SETUP_PROMPT)}" type="button">Copy setup prompt</button>
+        <span class="agent__alt">or point your agent at <a href="/llms.txt">supacanvas.com/llms.txt</a></span>
+      </div>
+      <p class="agent__how"><strong>How it works:</strong> the prompt tells the agent to detect which client it's running in, run <code style="font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px;">npm install -g supacanvas</code>, write the matching MCP config to disk, and verify with <code style="font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px;">canvas_list</code> after you restart. Works on Cursor, Claude Code, Codex CLI, opencode, Continue, Factory droid, and any other MCP client.</p>
     </section>
 
     <section class="security">
