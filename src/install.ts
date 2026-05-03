@@ -20,6 +20,23 @@ const SERVER_COMMAND = "supacanvas";
 const SERVER_ARGS = ["mcp"];
 const CLAUDE_DESKTOP_PATH_MACOS = "~/Library/Application Support/Claude/claude_desktop_config.json";
 const CONTINUE_PATH = "~/.continue/config.yaml";
+const CODEX_PATH = "~/.codex/config.toml";
+const OPENCODE_PATH = "~/.config/opencode/opencode.json";
+
+// Other MCP-compatible tools — listed by name only on the universal card.
+// All accept the same `mcpServers` JSON pattern with minor wrapping differences.
+const OTHER_MCP_TOOLS = [
+  "Cline",
+  "Windsurf",
+  "Gemini CLI",
+  "Zed",
+  "JetBrains AI",
+  "Goose",
+  "Charm Crush",
+  "Aider",
+  "Roo Code",
+  "ChatGPT (when MCP ships)",
+];
 
 function buildCursorDeepLink(): string {
   // Cursor's MCP one-click format:
@@ -63,6 +80,45 @@ function buildContinueYaml(): string {
       - mcp`;
 }
 
+function buildCodexToml(): string {
+  return `[mcp_servers.${SERVER_NAME}]
+command = "${SERVER_COMMAND}"
+args = [${SERVER_ARGS.map((a) => `"${a}"`).join(", ")}]`;
+}
+
+function buildOpenCodeJson(): string {
+  return JSON.stringify(
+    {
+      $schema: "https://opencode.ai/config.json",
+      mcp: {
+        [SERVER_NAME]: {
+          type: "local",
+          command: [SERVER_COMMAND, ...SERVER_ARGS],
+          enabled: true,
+        },
+      },
+    },
+    null,
+    2,
+  );
+}
+
+function buildFactoryDroidJson(): string {
+  return JSON.stringify(
+    { mcpServers: { [SERVER_NAME]: { command: SERVER_COMMAND, args: SERVER_ARGS } } },
+    null,
+    2,
+  );
+}
+
+function buildUniversalJson(): string {
+  return JSON.stringify(
+    { [SERVER_NAME]: { command: SERVER_COMMAND, args: SERVER_ARGS } },
+    null,
+    2,
+  );
+}
+
 export function renderInstallPage(opts: InstallPageOptions = {}): string {
   const includeInstall = opts.includeInstallStep ?? true;
   const repo = opts.repo ?? "bhaulik/supacanvas";
@@ -73,6 +129,10 @@ export function renderInstallPage(opts: InstallPageOptions = {}): string {
   const claudeCodeCmd = buildClaudeCodeCommand();
   const claudeDesktopJson = buildClaudeDesktopJson();
   const continueYaml = buildContinueYaml();
+  const codexToml = buildCodexToml();
+  const opencodeJson = buildOpenCodeJson();
+  const factoryDroidJson = buildFactoryDroidJson();
+  const universalJson = buildUniversalJson();
   const installOneLiner = `curl -fsSL https://raw.githubusercontent.com/${repo}/main/install.sh | bash`;
 
   const installSection = includeInstall ? `
@@ -153,6 +213,42 @@ export function renderInstallPage(opts: InstallPageOptions = {}): string {
 
       <article class="client">
         <header class="client-head">
+          <h3>Codex CLI</h3>
+          <span class="badge">Manual (TOML)</span>
+        </header>
+        <p class="hint">Add to <code>${escapeHtml(CODEX_PATH)}</code>:</p>
+        <div class="codeblock">
+          <pre><code>${escapeHtml(codexToml)}</code></pre>
+          <button class="copy-btn" data-copy="${escapeHtml(codexToml)}" type="button">Copy snippet</button>
+        </div>
+      </article>
+
+      <article class="client">
+        <header class="client-head">
+          <h3>opencode</h3>
+          <span class="badge">Manual (JSON)</span>
+        </header>
+        <p class="hint">Add to <code>${escapeHtml(OPENCODE_PATH)}</code>:</p>
+        <div class="codeblock">
+          <pre><code>${escapeHtml(opencodeJson)}</code></pre>
+          <button class="copy-btn" data-copy="${escapeHtml(opencodeJson)}" type="button">Copy snippet</button>
+        </div>
+      </article>
+
+      <article class="client">
+        <header class="client-head">
+          <h3>Factory droid</h3>
+          <span class="badge">Manual (JSON)</span>
+        </header>
+        <p class="hint">Add to droid's MCP config (Settings → MCP Servers, or the JSON config in your Factory workspace):</p>
+        <div class="codeblock">
+          <pre><code>${escapeHtml(factoryDroidJson)}</code></pre>
+          <button class="copy-btn" data-copy="${escapeHtml(factoryDroidJson)}" type="button">Copy snippet</button>
+        </div>
+      </article>
+
+      <article class="client">
+        <header class="client-head">
           <h3>Continue</h3>
           <span class="badge">Manual (YAML)</span>
         </header>
@@ -165,13 +261,13 @@ export function renderInstallPage(opts: InstallPageOptions = {}): string {
 
       <article class="client">
         <header class="client-head">
-          <h3>Other (any MCP client)</h3>
-          <span class="badge">JSON</span>
+          <h3>Any other MCP-compatible tool</h3>
+          <span class="badge">Universal JSON</span>
         </header>
-        <p class="hint">Drop this into the client's <code>mcpServers</code> map:</p>
+        <p class="hint">Works with: ${OTHER_MCP_TOOLS.map((t) => `<code>${escapeHtml(t)}</code>`).join(" · ")} — and any other MCP client. Drop this into the client's <code>mcpServers</code> map:</p>
         <div class="codeblock">
-          <pre><code>${escapeHtml(claudeDesktopJson)}</code></pre>
-          <button class="copy-btn" data-copy="${escapeHtml(claudeDesktopJson)}" type="button">Copy</button>
+          <pre><code>${escapeHtml(universalJson)}</code></pre>
+          <button class="copy-btn" data-copy="${escapeHtml(universalJson)}" type="button">Copy</button>
         </div>
       </article>
     </div>
