@@ -19,6 +19,7 @@ import {
   renderGone,
   renderLanding,
   renderNotFound,
+  renderUseCases,
   renderViewer,
 } from "./viewer";
 
@@ -272,6 +273,16 @@ app.get("/", (c) => {
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "public, max-age=300",
+    },
+  });
+});
+
+// ============================================================ GET /uses (use-case prompt library)
+app.get("/uses", (c) => {
+  return new Response(renderUseCases(), {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "public, max-age=600",
     },
   });
 });
