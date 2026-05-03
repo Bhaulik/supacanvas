@@ -92,7 +92,7 @@ function buildVSCodeDeepLink(insiders = false): string {
   return `${scheme}:mcp/install?${encodeURIComponent(config)}`;
 }
 
-const INSTALL_CMD = "npm install -g supacanvas";
+const INSTALL_CMD = "npm install -g supacanvas && supacanvas serve";
 const CLAUDE_CODE_CMD = "claude mcp add supacanvas supacanvas mcp";
 const CLAUDE_DESKTOP_JSON = JSON.stringify(
   { mcpServers: { supacanvas: { command: "supacanvas", args: ["mcp"] } } },
@@ -318,6 +318,23 @@ export function renderLanding(): string {
     .install__btn[data-copied="1"] { background: var(--accent); }
     .install__btn[data-copied="1"]::before { content: "✓ "; }
 
+    .install__hint {
+      margin: 16px auto 0;
+      max-width: 50ch;
+      font-size: 12px;
+      color: var(--ink-faint);
+      line-height: 1.55;
+    }
+    .install__hint code {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--accent);
+      background: var(--paper-tint);
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--rule);
+    }
+
     .meta {
       margin-top: 28px;
       font-family: var(--mono);
@@ -528,9 +545,165 @@ export function renderLanding(): string {
     .snippet__btn[data-copied="1"] { background: var(--accent); border-color: var(--accent); }
     .snippet__btn[data-copied="1"]::before { content: "✓ "; }
 
+    /* ============================================================ SECURITY */
+    .security {
+      margin-top: 56px;
+      padding-top: 32px;
+      border-top: 1px solid var(--rule);
+    }
+    .security__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .security__title {
+      font-family: var(--display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 24px;
+      letter-spacing: -0.01em;
+      margin: 0;
+      color: var(--ink);
+    }
+    .security__sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin: 0;
+    }
+    .security__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .security__item {
+      padding: 16px 18px;
+      background: var(--paper-tint);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      border-left: 2px solid var(--accent);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .security__label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .security__body {
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+      margin: 0;
+    }
+    .security__body code {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      background: var(--paper);
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--rule);
+    }
+    @media (max-width: 720px) {
+      .security__grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================ TROUBLESHOOTING */
+    .trouble {
+      margin-top: 56px;
+      padding-top: 32px;
+      border-top: 1px solid var(--rule);
+    }
+    .trouble__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .trouble__title {
+      font-family: var(--display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 24px;
+      letter-spacing: -0.01em;
+      margin: 0;
+      color: var(--ink);
+    }
+    .trouble__sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin: 0;
+    }
+    .trouble__list {
+      display: grid;
+      gap: 6px;
+    }
+    .trouble details {
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--paper-tint);
+      transition: border-color 160ms var(--easing);
+    }
+    .trouble details:hover { border-color: var(--rule-strong); }
+    .trouble details[open] { border-color: var(--accent); background: var(--paper); }
+    .trouble summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: var(--display);
+      font-style: italic;
+    }
+    .trouble summary::-webkit-details-marker { display: none; }
+    .trouble summary::after {
+      content: "+";
+      font-family: var(--mono);
+      font-style: normal;
+      font-size: 16px;
+      color: var(--accent);
+      transition: transform 200ms var(--easing);
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+    }
+    .trouble details[open] summary::after { content: "−"; }
+    .trouble__answer {
+      padding: 0 16px 16px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--ink-soft);
+    }
+    .trouble__answer code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--ink);
+      color: var(--paper);
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.02em;
+    }
+    .trouble__answer p { margin: 0 0 8px; }
+    .trouble__answer p:last-child { margin-bottom: 0; }
+
     /* ============================================================ FOOTER */
     .foot {
-      margin-top: 80px;
+      margin-top: 56px;
       padding-top: 24px;
       border-top: 1px solid var(--rule);
       text-align: center;
@@ -587,6 +760,8 @@ export function renderLanding(): string {
         <span class="install__cmd">${INSTALL_CMD}</span>
         <button class="install__btn" data-copy="${INSTALL_CMD}" type="button">Copy</button>
       </div>
+
+      <p class="install__hint">Installs the CLI globally · starts the gallery at <code>localhost:7777</code> · auto-opens in your browser.</p>
 
       <div class="meta">
         <span>Local-first</span>
@@ -701,6 +876,105 @@ export function renderLanding(): string {
           <button class="snippet__btn" data-copy="${escapeForAttr(UNIVERSAL_JSON)}" type="button">Copy</button>
         </div>
       </article>
+    </section>
+
+    <section class="security">
+      <div class="security__head">
+        <h2 class="security__title">Why it's secure</h2>
+        <p class="security__sub">Six things we don't do</p>
+      </div>
+      <div class="security__grid">
+        <div class="security__item">
+          <span class="security__label">Local-first</span>
+          <p class="security__body">Your canvases live as plain files under <code>~/.supacanvas/</code>. They never leave your machine unless you explicitly run <code>supacanvas share</code>.</p>
+        </div>
+        <div class="security__item">
+          <span class="security__label">Sandboxed execution</span>
+          <p class="security__body">AI-generated JS runs inside <code>&lt;iframe sandbox="allow-scripts"&gt;</code>. No same-origin, no parent-DOM access, no top-frame nav.</p>
+        </div>
+        <div class="security__item">
+          <span class="security__label">No telemetry</span>
+          <p class="security__body">Zero phone-home pings, no analytics SDK, no usage tracking. Verifiable in the open-source repo — the code is the spec.</p>
+        </div>
+        <div class="security__item">
+          <span class="security__label">Token-gated revoke</span>
+          <p class="security__body">Public-share owner tokens are 32-char random, sha256-hashed in KV. The plaintext token never crosses to the browser, ever.</p>
+        </div>
+        <div class="security__item">
+          <span class="security__label">No accounts, no PII</span>
+          <p class="security__body">Sharing is anonymous. No email, no name, no IP logged beyond the 24-hour rate-limit window. Lose nothing if the cloud disappears.</p>
+        </div>
+        <div class="security__item">
+          <span class="security__label">MIT, fully open source</span>
+          <p class="security__body">Auditable, forkable, no surprises. Both the npm-published binary and the GitHub source share a single squashed commit history.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="trouble">
+      <div class="trouble__head">
+        <h2 class="trouble__title">Troubleshooting</h2>
+        <p class="trouble__sub">Tap to expand</p>
+      </div>
+      <div class="trouble__list">
+        <details>
+          <summary>command not found: supacanvas</summary>
+          <div class="trouble__answer">
+            <p>Your global npm bin isn't on <code>PATH</code>. Run <code>npm config get prefix</code> and make sure <code>&lt;prefix&gt;/bin</code> is in your shell's <code>PATH</code>.</p>
+            <p>Or skip the global install and run on demand: <code>npx supacanvas serve</code> · <code>bunx supacanvas serve</code>.</p>
+          </div>
+        </details>
+        <details>
+          <summary>EACCES permission denied during install</summary>
+          <div class="trouble__answer">
+            <p>Don't use <code>sudo</code> — it creates files only root can edit. Instead, point npm at a user-owned prefix:</p>
+            <p><code>npm config set prefix ~/.npm-global</code></p>
+            <p>Then add <code>~/.npm-global/bin</code> to your <code>PATH</code> in <code>~/.zshrc</code> or <code>~/.bashrc</code> and re-run the install.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Port 7777 already in use</summary>
+          <div class="trouble__answer">
+            <p>Kill whatever is on it: <code>lsof -ti :7777 | xargs kill -9</code></p>
+            <p>Or pick a different port: <code>supacanvas serve --port 8080</code></p>
+          </div>
+        </details>
+        <details>
+          <summary>My AI tool doesn't see supacanvas's MCP tools</summary>
+          <div class="trouble__answer">
+            <p>Restart the AI client after adding the config — Cursor, Claude Desktop, VS Code, and Claude Code all need a fresh start to pick up new MCP servers.</p>
+            <p>Test the binary: <code>supacanvas mcp</code> should hang waiting for stdio JSON-RPC (that's correct — kill it with Ctrl-C).</p>
+            <p>Confirm you used <code>-g</code> on the install. Without <code>-g</code>, <code>supacanvas</code> isn't on <code>PATH</code> and the AI client can't spawn it.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Gallery says "no canvases yet"</summary>
+          <div class="trouble__answer">
+            <p>Working as designed — you haven't created any. Ask your AI: <em>"Make a canvas with a working analog clock"</em> or <em>"Build me a Q3 revenue dashboard in supacanvas"</em>. It calls <code>canvas_create</code> and the gallery picks it up on refresh.</p>
+            <p>Need ideas? See <a href="/uses" style="color: var(--accent); border-bottom: 1px solid var(--rule);">42 ready-to-copy prompts</a>.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Share button: "Server isn't running"</summary>
+          <div class="trouble__answer">
+            <p>The local viewer needs the supacanvas server running to handle share requests. Open a terminal and run <code>supacanvas serve</code>. Keep it open while you use the gallery.</p>
+          </div>
+        </details>
+        <details>
+          <summary>PNG screenshot fails or returns 503</summary>
+          <div class="trouble__answer">
+            <p>Screenshots use headless Chrome. Install Chrome, Brave, Edge, Arc, or Chromium — supacanvas auto-detects all of them on macOS / Linux / Windows.</p>
+            <p>If detection fails, point at it explicitly: <code>SUPACANVAS_CHROME_PATH=/path/to/chrome supacanvas serve</code></p>
+          </div>
+        </details>
+        <details>
+          <summary>My canvases disappeared</summary>
+          <div class="trouble__answer">
+            <p>Files live under <code>~/.supacanvas/canvases/&lt;id&gt;/</code>. If that directory is empty, check <code>~/.canvas/</code> or <code>~/.plate/</code> — supacanvas auto-detects these legacy paths from earlier names.</p>
+            <p>To force a specific location: <code>SUPACANVAS_HOME=/some/path supacanvas serve</code></p>
+          </div>
+        </details>
+      </div>
     </section>
 
     <footer class="foot">
