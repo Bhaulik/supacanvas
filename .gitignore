@@ -9,4 +9,8 @@ extension/node_modules/
 extension/.output/
 extension/.wxt/
 
+share-api/node_modules/
+share-api/.wrangler/
+share-api/.dev.vars
+
 *.tgz

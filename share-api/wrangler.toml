@@ -1,0 +1,44 @@
+name = "supacanvas-share-api"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+workers_dev = true
+
+# ====================================================================
+# KV namespaces — create them, then paste the IDs below.
+#
+#   wrangler kv namespace create SHARE_META
+#   wrangler kv namespace create SHARE_RATELIMIT
+#
+# Each command prints something like:
+#   [[kv_namespaces]]
+#   binding = "SHARE_META"
+#   id = "abc123def456..."
+# ====================================================================
+[[kv_namespaces]]
+binding = "SHARE_META"
+id = "a75202179cbd49af8be6e594cda69fc2"
+
+[[kv_namespaces]]
+binding = "SHARE_RATELIMIT"
+id = "085eedbdca834f6bac7cb81b49016b31"
+
+# ====================================================================
+# R2 bucket — create with:
+#   wrangler r2 bucket create supacanvas-share
+# ====================================================================
+[[r2_buckets]]
+binding = "SHARE_BUCKET"
+bucket_name = "supacanvas-share"
+
+# ====================================================================
+# Custom domain — uncomment once supacanvas.com is set up in Cloudflare
+# (Add the domain to your CF account first, then deploy).
+# ====================================================================
+# routes = [
+#   { pattern = "supacanvas.com/*", zone_name = "supacanvas.com" },
+#   { pattern = "www.supacanvas.com/*", zone_name = "supacanvas.com" }
+# ]
+
+# Public URL of this deployment, used by the viewer for OG image links etc.
+[vars]
+PUBLIC_BASE_URL = "https://supacanvas.com"
